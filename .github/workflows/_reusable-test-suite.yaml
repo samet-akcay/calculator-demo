@@ -11,10 +11,14 @@ on:
         description: "Types of tests to run (comma-separated: unit,integration)"
         type: string
         default: "unit,integration"
-      max-test-time:
-        description: "Maximum test execution time in minutes"
+      unit-test-timeout:
+        description: "Timeout for unit tests (minutes)"
         type: number
         default: 10
+      integration-test-timeout:
+        description: "Timeout for integration tests (minutes)"
+        type: number
+        default: 30
     secrets:
       codecov-token:
         required: false
@@ -28,7 +32,7 @@ jobs:
   unit-tests:
     if: contains(inputs.test-types, 'unit')
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ inputs.max-test-time }}
+    timeout-minutes: ${{ inputs.unit-test-timeout }}
     steps:
       - uses: actions/checkout@v4
       - name: Run unit tests
@@ -49,7 +53,7 @@ jobs:
   integration-tests:
     if: contains(inputs.test-types, 'integration')
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ inputs.max-test-time * 3 }}
+    timeout-minutes: ${{ inputs.integration-test-timeout }}
     steps:
       - uses: actions/checkout@v4
       - name: Run integration tests

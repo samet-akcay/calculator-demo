@@ -36,7 +36,8 @@ jobs:
     uses: ./.github/workflows/_reusable-test-suite.yaml
     with:
       test-types: "unit,integration"
-      max-test-time: 30
+      unit-test-timeout: 10
+      integration-test-timeout: 30
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
