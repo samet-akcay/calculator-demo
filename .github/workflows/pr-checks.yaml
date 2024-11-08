@@ -19,9 +19,7 @@ on:
         description: "Node.js version to use"
         type: string
         default: "18.15.0"
-    secrets:
-      CODECOV_TOKEN:
-        required: true
+
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
