@@ -48,6 +48,7 @@ jobs:
       tools: "bandit,semgrep,trivy"
       scan-scope: "all"
       severity-level: "LOW"
+      fail-on-findings: true
 
   build:
     needs: [version, quality, tests, security]

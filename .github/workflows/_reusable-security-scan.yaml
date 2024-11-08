@@ -28,7 +28,7 @@ jobs:
   setup:
     runs-on: ubuntu-latest
     outputs:
-      tools: ${{ steps.parse-tools.outputs.tools }}
+      tools-array: ${{ steps.parse-tools.outputs.tools_json }}
     steps:
       - id: parse-tools
         run: |
@@ -36,32 +36,46 @@ jobs:
           if [[ "$TOOLS" == "all" ]]; then
             TOOLS="bandit,clamav,semgrep,trivy"
           fi
-          echo "tools=$TOOLS" >> $GITHUB_OUTPUT
+          # Convert comma-separated string to JSON array
+          JSON_ARRAY=$(echo "$TOOLS" | sed 's/,/","/g' | sed 's/^/["/' | sed 's/$/"]/')
+          echo "tools_json=$JSON_ARRAY" >> $GITHUB_OUTPUT
 
-  scan:
+  run-scans:
     needs: setup
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        tool: ${{ fromJson(format('[{0}]', needs.setup.outputs.tools)) }}
-    runs-on: ubuntu-latest
+        tool: ${{ fromJSON(needs.setup.outputs.tools-array) }}
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/security/${{ matrix.tool }}
+        with:
+          fetch-depth: 0
+
+      - name: Run ${{ matrix.tool }} scan
+        uses: ./.github/actions/security/${{ matrix.tool }}
         with:
           scan-scope: ${{ inputs.scan-scope }}
           severity-level: ${{ inputs.severity-level }}
           fail-on-findings: ${{ inputs.fail-on-findings }}
 
+      - name: Upload scan results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.tool }}-results
+          path: security-results/${{ matrix.tool }}
+          retention-days: 7
+
   summarize:
-    needs: scan
+    needs: run-scans
     runs-on: ubuntu-latest
     outputs:
       has_findings: ${{ steps.check-findings.outputs.has_findings }}
     steps:
       - id: check-findings
         run: |
-          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+          if [[ "${{ contains(needs.run-scans.result, 'failure') }}" == "true" ]]; then
             echo "has_findings=true" >> $GITHUB_OUTPUT
           else
             echo "has_findings=false" >> $GITHUB_OUTPUT
