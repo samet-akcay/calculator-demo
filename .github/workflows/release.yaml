@@ -74,7 +74,7 @@ jobs:
     with:
       tools: "bandit,semgrep,trivy"
       scan_scope: "all"
-      severity_level: "low"
+      severity_level: "LOW"
       fail_on_findings: true
     secrets: inherit
 

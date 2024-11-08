@@ -136,7 +136,7 @@ jobs:
     with:
       tools: "bandit,semgrep"
       scan_scope: "changed"
-      severity_level: "medium"
+      severity_level: "MEDIUM"
       fail_on_findings: true
 
   status-check:

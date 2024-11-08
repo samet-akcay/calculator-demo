@@ -16,7 +16,7 @@ on:
         description: "Minimum severity level"
         required: false
         type: string
-        default: "low"
+        default: "LOW"
       fail_on_findings:
         description: "Fail workflow if issues found"
         required: false
@@ -53,10 +53,10 @@ on:
         required: true
         type: choice
         options:
-          - low
-          - medium
-          - high
-        default: "low"
+          - LOW
+          - MEDIUM
+          - HIGH
+        default: "LOW"
       fail_on_findings:
         description: "Fail workflow if issues found"
         required: true

@@ -45,6 +45,7 @@ dev = [
     "pytest-cov>=4.0",
     "pytest-timeout>=2.1",
     "pytest-json-report>=1.5",
+    "pytest-xdist>=3.0",
     "black>=23.0",
     "ruff>=0.1.0",
 ]

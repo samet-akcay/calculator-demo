@@ -15,13 +15,13 @@ inputs:
     required: false
     default: "pyproject.toml"
   severity_level:
-    description: "Minimum severity level to report (all/low/medium/high)"
+    description: "Minimum severity level to report (all/LOW/MEDIUM/HIGH)"
     required: false
-    default: "low"
+    default: "LOW"
   confidence_level:
-    description: "Minimum confidence level to report (all/low/medium/high)"
+    description: "Minimum confidence level to report (all/LOW/MEDIUM/HIGH)"
     required: false
-    default: "low"
+    default: "LOW"
   output_format:
     description: "Format for scan results (json/txt/html/csv)"
     required: false
