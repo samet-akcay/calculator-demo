@@ -1,0 +1,45 @@
+name: Reusable Artifact Builder
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: "Python version for building"
+        type: string
+        default: "3.10"
+      verify-package:
+        description: "Run package verification"
+        type: boolean
+        default: true
+    outputs:
+      artifact-name:
+        description: "Name of the uploaded artifact"
+        value: ${{ jobs.build.outputs.artifact-name }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-name: ${{ steps.set-artifact-name.outputs.name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: Build package
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+      - name: Verify package
+        if: inputs.verify-package
+        run: |
+          pip install twine
+          twine check dist/*
+      - name: Set artifact name
+        id: set-artifact-name
+        run: echo "name=dist-$(date +%s)" >> $GITHUB_OUTPUT
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.set-artifact-name.outputs.name }}
+          path: dist/
+          retention-days: 5

@@ -1,0 +1,79 @@
+name: Reusable Test Suite
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: "Python version to use for tests"
+        type: string
+        default: "3.10"
+      test-types:
+        description: "Types of tests to run (comma-separated: unit,integration)"
+        type: string
+        default: "unit,integration"
+      max-test-time:
+        description: "Maximum test execution time in minutes"
+        type: number
+        default: 10
+    secrets:
+      codecov-token:
+        required: false
+        description: "Token for Codecov upload"
+    outputs:
+      test-results:
+        description: "Path to test results artifact"
+        value: ${{ jobs.publish-results.outputs.artifact-path }}
+
+jobs:
+  unit-tests:
+    if: contains(inputs.test-types, 'unit')
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.max-test-time }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run unit tests
+        uses: ./.github/actions/pytest
+        with:
+          python-version: ${{ inputs.python-version }}
+          test-type: "unit"
+          codecov-token: ${{ secrets.codecov-token }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-results
+          path: |
+            pytest.xml
+            coverage.xml
+          retention-days: 7
+
+  integration-tests:
+    if: contains(inputs.test-types, 'integration')
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.max-test-time * 3 }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run integration tests
+        uses: ./.github/actions/pytest
+        with:
+          python-version: ${{ inputs.python-version }}
+          test-type: "integration"
+          codecov-token: ${{ secrets.codecov-token }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results
+          path: |
+            pytest.xml
+            coverage.xml
+          retention-days: 7
+
+  publish-results:
+    needs: [unit-tests, integration-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-path: ${{ steps.merge-results.outputs.artifact-path }}
+    steps:
+      - name: Merge test results
+        id: merge-results
+        run: echo "artifact-path=test-results" >> $GITHUB_OUTPUT
