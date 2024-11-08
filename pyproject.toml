@@ -18,6 +18,9 @@ classifiers = [
 ]
 dependencies = []
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/calculator"]
+
 [project.urls]
 Homepage = "https://github.com/samet-akcay/calculator-demo"
 Issues = "https://github.com/samet-akcay/calculator-demo/issues"
@@ -27,7 +30,7 @@ addopts = "-v --cov=calculator --cov-report=xml --cov-report=term"
 testpaths = ["tests"]
 
 [tool.coverage.run]
-source = ["calculator"]
+packages = ["src/calculator"]
 
 [tool.coverage.report]
 exclude_lines = [
