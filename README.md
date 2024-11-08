@@ -31,18 +31,21 @@ result = divide(6, 2)    # 3.0
 ## Development Setup
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/yourusername/calculator-demo.git
    cd calculator-demo
    ```
 
 2. Create and activate virtual environment:
+
    ```bash
    python -m venv .venv
    source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    ```
 
 3. Install development dependencies:
+
    ```bash
    pip install -e ".[dev]"
    ```

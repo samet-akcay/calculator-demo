@@ -20,7 +20,6 @@ on:
         type: string
         default: "18.15.0"
 
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
