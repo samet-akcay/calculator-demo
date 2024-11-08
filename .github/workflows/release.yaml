@@ -181,15 +181,38 @@ jobs:
           echo "Version: ${{ needs.version.outputs.version }}"
 
   # Final Stage: Production Release
-  production-release:
+  prepare-release:
     needs: [version, build, release-approval]
+    runs-on: ubuntu-latest
     environment:
       name: production
       url: ${{ steps.prod-url.outputs.url }}
+    steps:
+      - name: Generate production URL
+        id: prod-url
+        run: |
+          echo "url=https://pypi.org/project/${GITHUB_REPOSITORY#*/}/${{ needs.version.outputs.version }}" >> $GITHUB_OUTPUT
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.artifact-name }}
+          path: dist
+
+      - name: Upload for release
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-release-artifacts
+          path: dist/
+          retention-days: 1
+
+  # Actual Release Publishing
+  publish-release:
+    needs: [version, prepare-release]
     uses: ./.github/workflows/_reusable-release-publisher.yaml
     with:
       version: ${{ needs.version.outputs.version }}
-      artifact-name: ${{ needs.build.outputs.artifact-name }}
+      artifact-name: production-release-artifacts
       is-prerelease: false
     secrets:
       pypi-token: ${{ secrets.PYPI_TOKEN }}
@@ -203,7 +226,8 @@ jobs:
       - qa-validation
       - product-review
       - release-approval
-      - production-release
+      - prepare-release
+      - publish-release
     if: always()
     runs-on: ubuntu-latest
     steps:
