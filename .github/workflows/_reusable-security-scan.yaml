@@ -66,12 +66,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for changed files detection
+
       - name: Run Trivy scan
+        id: trivy
         uses: ./.github/actions/security/trivy
         with:
-          scan-scope: ${{ inputs.scan-scope }}
-          severity-level: ${{ inputs.severity-level }}
-          fail-on-findings: ${{ inputs.fail-on-findings }}
+          scan_type: "fs"
+          scan_scope: ${{ inputs.scan-scope }}
+          severity: ${{ inputs.severity-level }},HIGH,CRITICAL
+          scanners: "vuln,secret"
+          format: "sarif"
+          timeout: "15m"
+          ignore_unfixed: "true"
+
+      - name: Move Trivy results
+        if: always() && steps.trivy.outputs.report_path
+        run: |
+          mkdir -p security-results/trivy
+          mv ${{ steps.trivy.outputs.report_path }} security-results/trivy/
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
