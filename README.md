@@ -51,6 +51,7 @@ result = divide(6, 2)    # 3.0
    ```
 
 4. Run tests:
+
    ```bash
    pytest
    ```
@@ -61,4 +62,5 @@ See [RELEASE.md](RELEASE.md) for detailed information about the release process.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE)
+file for details.

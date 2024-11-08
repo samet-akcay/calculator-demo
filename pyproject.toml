@@ -49,3 +49,8 @@ dev = [
     "black>=23.0",
     "ruff>=0.1.0",
 ]
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# BANDIT CONFIGURATION                                                        #
+[tool.bandit]
+skips = ["B101"]
