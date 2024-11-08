@@ -4,7 +4,7 @@ A simple calculator package demonstrating a complete CI/CD pipeline with GitHub 
 
 ## Features
 
-- Basic arithmetic operations (add, subtract, multiply, divide)
+- Basic arithmetic operations (add, subtract, multiply, divide).
 - Full test coverage
 - Automated release process
 - Security scanning
