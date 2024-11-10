@@ -1,4 +1,3 @@
-# release.yaml
 name: Release
 
 on:
@@ -8,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to release (e.g., v1.2.3)"
+        description: "Version to release (e.g., v1.2.3 or v1.2.3-rc1)"
         required: true
         type: string
       dry_run:
@@ -60,7 +59,7 @@ jobs:
       python-version: "3.10"
       verify-package: true
 
-  # Stage 1: Technical Review
+  # Stage 1: Technical Review (Required for both RC and final releases)
   technical-review:
     needs: [version, build]
     environment:
@@ -79,6 +78,11 @@ jobs:
           name: ${{ needs.build.outputs.artifact-name }}
           path: dist
 
+      - name: Show environment info
+        run: |
+          echo "Environment: ${{ vars.ENVIRONMENT }}"
+          echo "Review Level: ${{ vars.REVIEW_LEVEL }}"
+
       - name: Technical review checklist
         run: |
           echo "Technical Review Checklist:"
@@ -87,9 +91,10 @@ jobs:
           echo "- Code quality passed: ${{ needs.quality.result == 'success' }}"
           echo "- Build artifacts verified: ${{ needs.build.result == 'success' }}"
 
-  # Stage 2: QA Validation
+  # Stage 2: QA Validation (Only for RC releases)
   qa-validation:
     needs: [version, build, technical-review]
+    if: contains(needs.version.outputs.version, '-rc')
     environment:
       name: qa-validation
       url: ${{ steps.qa-url.outputs.url }}
@@ -97,10 +102,15 @@ jobs:
     outputs:
       validation-status: ${{ steps.validate.outputs.status }}
     steps:
+      - name: Show environment info
+        run: |
+          echo "Environment: ${{ vars.ENVIRONMENT }}"
+          echo "QA Environment: ${{ vars.QA_ENVIRONMENT }}"
+
       - name: Set QA environment URL
         id: qa-url
         run: |
-          echo "url=https://test.pypi.org/project/${GITHUB_REPOSITORY#*/}/${VERSION}" >> $GITHUB_OUTPUT
+          echo "url=${{ vars.TEST_PYPI_URL }}/project/${GITHUB_REPOSITORY#*/}/${VERSION}" >> $GITHUB_OUTPUT
         env:
           VERSION: ${{ needs.version.outputs.version }}
 
@@ -114,7 +124,7 @@ jobs:
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
-          TWINE_REPOSITORY_URL: testpypi
+          TWINE_REPOSITORY_URL: ${{ vars.TEST_PYPI_URL }}/legacy/
         run: |
           pip install --upgrade pip twine
           twine upload dist/*
@@ -124,11 +134,10 @@ jobs:
         run: |
           python -m venv test-env
           source test-env/bin/activate
-          pip install --index-url https://test.pypi.org/simple/ \
+          pip install --index-url ${{ vars.TEST_PYPI_URL }}/simple/ \
                      --extra-index-url https://pypi.org/simple/ \
                      "${GITHUB_REPOSITORY#*/}==${VERSION#v}"
 
-          # Add QA validation tests here
           if python -c "import ${GITHUB_REPOSITORY#*/}; print(${GITHUB_REPOSITORY#*/}.__version__)"; then
             echo "status=success" >> $GITHUB_OUTPUT
           else
@@ -138,19 +147,24 @@ jobs:
         env:
           VERSION: ${{ needs.version.outputs.version }}
 
-  # Stage 3: Product Owner Review
+  # Stage 3: Product Review (Only for RC releases)
   product-review:
     needs: [version, qa-validation]
-    if: needs.qa-validation.outputs.validation-status == 'success'
+    if: contains(needs.version.outputs.version, '-rc')
     environment:
       name: product-review
       url: ${{ steps.product-url.outputs.url }}
     runs-on: ubuntu-latest
     steps:
+      - name: Show environment info
+        run: |
+          echo "Environment: ${{ vars.ENVIRONMENT }}"
+          echo "Review Type: ${{ vars.REVIEW_TYPE }}"
+
       - name: Generate review URL
         id: product-url
         run: |
-          echo "url=https://test.pypi.org/project/${GITHUB_REPOSITORY#*/}/${VERSION}" >> $GITHUB_OUTPUT
+          echo "url=${{ vars.TEST_PYPI_URL }}/project/${GITHUB_REPOSITORY#*/}/${VERSION}" >> $GITHUB_OUTPUT
         env:
           VERSION: ${{ needs.version.outputs.version }}
 
@@ -161,14 +175,20 @@ jobs:
           echo "QA Validation: ${{ needs.qa-validation.outputs.validation-status }}"
           echo "Release Notes: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/${{ needs.version.outputs.version }}"
 
-  # Stage 4: Final Release Approval
+  # Stage 4: Release Approval (Only for RC releases)
   release-approval:
     needs: [version, product-review]
+    if: contains(needs.version.outputs.version, '-rc')
     environment:
       name: release-approval
       url: ${{ steps.approval-url.outputs.url }}
     runs-on: ubuntu-latest
     steps:
+      - name: Show environment info
+        run: |
+          echo "Environment: ${{ vars.ENVIRONMENT }}"
+          echo "Release Gate: ${{ vars.RELEASE_GATE }}"
+
       - name: Generate approval URL
         id: approval-url
         run: |
@@ -176,24 +196,45 @@ jobs:
 
       - name: Display release checklist
         run: |
-          echo "Release Approval Checklist:"
-          echo "- Technical Review: Approved"
-          echo "- QA Validation: Passed"
-          echo "- Product Review: Approved"
+          echo "Final Release Approval Required"
+          echo "============================"
           echo "Version: ${{ needs.version.outputs.version }}"
+          echo "Approval Chain:"
+          echo "✓ Technical Review: Approved"
+          echo "✓ QA Validation: Passed"
+          echo "✓ Product Review: Approved"
 
   # Final Stage: Production Release
   prepare-release:
     needs: [version, build, release-approval]
+    if: |
+      !contains(needs.version.outputs.version, '-rc') ||
+      (contains(needs.version.outputs.version, '-rc') &&
+       needs.release-approval.result == 'success')
     runs-on: ubuntu-latest
     environment:
       name: production
       url: ${{ steps.prod-url.outputs.url }}
     steps:
+      - name: Show environment info
+        run: |
+          echo "Environment: ${{ vars.ENVIRONMENT }}"
+          echo "Deployment Target: ${{ vars.DEPLOYMENT_TARGET }}"
+
+      - name: Set version
+        id: set-version
+        run: |
+          if [[ "${{ needs.version.outputs.version }}" =~ -rc ]]; then
+            FINAL_VERSION="${{ needs.version.outputs.version }%-rc*}"
+          else
+            FINAL_VERSION="${{ needs.version.outputs.version }}"
+          fi
+          echo "final_version=${FINAL_VERSION}" >> $GITHUB_OUTPUT
+
       - name: Generate production URL
         id: prod-url
         run: |
-          echo "url=https://pypi.org/project/${GITHUB_REPOSITORY#*/}/${{ needs.version.outputs.version }}" >> $GITHUB_OUTPUT
+          echo "url=${{ vars.PYPI_URL }}/project/${GITHUB_REPOSITORY#*/}/${{ steps.set-version.outputs.final_version }}" >> $GITHUB_OUTPUT
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -210,12 +251,16 @@ jobs:
 
   # Actual Release Publishing
   publish-release:
-    needs: [version, prepare-release]
+    needs: [version, prepare-release, release-approval]
+    if: |
+      !failure() && !cancelled() &&
+      (!contains(needs.version.outputs.version, '-rc') ||
+       (contains(needs.version.outputs.version, '-rc') && needs.release-approval.result == 'success'))
     uses: ./.github/workflows/_reusable-release-publisher.yaml
     with:
       version: ${{ needs.version.outputs.version }}
       artifact-name: production-release-artifacts
-      is-prerelease: false
+      is-prerelease: contains(needs.version.outputs.version, '-rc')
     secrets:
       pypi-token: ${{ secrets.PYPI_TOKEN }}
       test-pypi-token: ${{ secrets.TEST_PYPI_TOKEN }}
@@ -230,7 +275,9 @@ jobs:
       - release-approval
       - prepare-release
       - publish-release
-    if: always()
+    if: |
+      always() &&
+      !inputs.dry_run
     runs-on: ubuntu-latest
     steps:
       - name: Check workflow status
@@ -240,6 +287,12 @@ jobs:
             exit 1
           fi
 
-          echo "Release workflow completed successfully"
-          echo "Version: ${{ needs.version.outputs.version }}"
-          echo "All approvals obtained and release published to PyPI"
+          if [[ "${{ needs.version.outputs.version }}" =~ -rc ]]; then
+            echo "Release candidate workflow completed successfully"
+            echo "Version: ${{ needs.version.outputs.version }}"
+            echo "All approvals obtained and published to Test PyPI"
+          else
+            echo "Production release workflow completed successfully"
+            echo "Version: ${{ needs.version.outputs.version }}"
+            echo "Published to PyPI"
+          fi
