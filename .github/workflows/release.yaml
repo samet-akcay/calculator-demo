@@ -225,7 +225,7 @@ jobs:
         id: set-version
         run: |
           if [[ "${{ needs.version.outputs.version }}" =~ -rc ]]; then
-            FINAL_VERSION="${{ needs.version.outputs.version }%-rc*}"
+            FINAL_VERSION=$(echo "${{ needs.version.outputs.version }}" | sed 's/-rc.*//')
           else
             FINAL_VERSION="${{ needs.version.outputs.version }}"
           fi
