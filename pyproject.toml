@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sa-calculator-demo"
-version = "0.2.0"
+dynamic = ["version"]
 description = "A simple calculator package demonstrating CI/CD pipeline"
 readme = "README.md"
 authors = [
@@ -17,6 +17,9 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = []
+
+[tool.hatch.version]
+path = "src/calculator/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/calculator"]
