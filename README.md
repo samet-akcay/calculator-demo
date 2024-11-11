@@ -1,6 +1,6 @@
 # Calculator Demo Package
 
-A simple calculator package demonstrating a complete CI/CD pipeline with GitHub Actions.
+A simple calculator package demonstrating a complete CI/CD pipeline with GitHub Actions
 
 ## Features
 
