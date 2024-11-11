@@ -104,6 +104,25 @@ jobs:
     outputs:
       validation-status: ${{ steps.validate.outputs.status }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get package name
+        id: get-package-name
+        run: |
+          # Install toml parser
+          pip install tomli
+
+          # Extract package name from pyproject.toml
+          PACKAGE_NAME=$(python -c "import tomli; print(tomli.load(open('pyproject.toml', 'rb'))['project']['name'])")
+          echo "Package name: $PACKAGE_NAME"
+          echo "name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+
+          # Get the import name (directory under src)
+          IMPORT_NAME=$(ls src/)
+          echo "Import name: $IMPORT_NAME"
+          echo "import_name=$IMPORT_NAME" >> $GITHUB_OUTPUT
+
       - name: Show environment info
         run: |
           echo "Environment: ${{ vars.ENVIRONMENT }}"
@@ -133,11 +152,14 @@ jobs:
         run: |
           python -m venv test-env
           source test-env/bin/activate
+
+          # Use extracted package name
           pip install --index-url ${{ vars.TEST_PYPI_URL }}/simple/ \
                      --extra-index-url https://pypi.org/simple/ \
-                     "${GITHUB_REPOSITORY#*/}==${VERSION#v}"
+                     "${{ steps.get-package-name.outputs.name }}==${VERSION#v}"
 
-          if python -c "import ${GITHUB_REPOSITORY#*/}; print(${GITHUB_REPOSITORY#*/}.__version__)"; then
+          # Use extracted import name
+          if python -c "import ${{ steps.get-package-name.outputs.import_name }}; print(${{ steps.get-package-name.outputs.import_name }}.__version__)"; then
             echo "status=success" >> $GITHUB_OUTPUT
           else
             echo "status=failure" >> $GITHUB_OUTPUT
