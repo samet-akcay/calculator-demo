@@ -3,7 +3,6 @@ name: PR Checks
 on:
   pull_request:
     branches: [main, "feature/**"]
-    paths-ignore: ["docs/**", "*.md", "LICENSE"]
 
 jobs:
   quality:
