@@ -1,21 +1,44 @@
 # Semgrep Security Scanner Action
 #
-# This action runs the Semgrep static application security testing (SAST) scanner with configurable options.
-# It supports:
-# - Flexible scan scope (all files or only changed)
-# - Customizable rule sets and configurations
-# - Multiple severity levels and reporting formats
-# - Configurable timeouts and failure conditions
+# This composite action runs Semgrep for advanced static analysis security testing (SAST).
+# It provides comprehensive code analysis with support for custom rules and multiple
+# programming languages.
 #
-# Example usage:
+# Features:
+# - Multi-language security scanning
+# - Built-in OWASP Top 10 rule sets
+# - Custom rule support
+# - Incremental scanning capability
+# - Performance-optimized execution
+# - Configurable severity levels
+# - SARIF report generation
+#
+# Scan Process:
+# 1. Sets up Python environment
+# 2. Installs and configures Semgrep
+# 3. Determines scan targets based on scope
+# 4. Applies configured rule sets
+# 5. Executes analysis with timeout protection
+# 6. Generates detailed findings report
+#
+# Performance Features:
+# - Intelligent file filtering
+# - Parallel rule execution
+# - Incremental analysis support
+# - Memory usage optimization
+# - Configurable timeouts
+#
+# Example Usage:
 #   - uses: ./.github/actions/security/semgrep
 #     with:
-#       scan_scope: "all"
-#       paths: "./src"
+#       scan_scope: "changed"
 #       config: "p/owasp-top-ten"
 #       severity: "WARNING"
-#       fail_on_findings: true
 #       output_format: "sarif"
+#
+# Note: For optimal results, consider using custom rule sets and
+# configuring appropriate severity thresholds for your project.
+# The SARIF output format enables integration with GitHub Security tab.
 
 name: "Semgrep SAST Scan"
 description: "Runs Semgrep security scanner with configurable options"

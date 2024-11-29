@@ -1,21 +1,61 @@
 # Trivy Security Scanner Action
 #
-# This action runs the Trivy security scanner for comprehensive security analysis including:
-# - Vulnerability scanning for dependencies
-# - Infrastructure as Code (IaC) security checks
-# - Container image scanning
-# - Secret detection
-# - Misconfiguration detection
+# This composite action runs Trivy for comprehensive security analysis across
+# multiple targets including container images, filesystems, and Infrastructure
+# as Code (IaC). It provides extensive vulnerability scanning and misconfiguration
+# detection capabilities.
 #
-# Example usage:
+# Features:
+# - Multi-target scanning support
+#   • Container images
+#   • Filesystem dependencies
+#   • Infrastructure as Code (IaC)
+#   • Git repositories
+# - Comprehensive vulnerability database
+# - Built-in policy checks
+# - Secret detection
+# - Software Bill of Materials (SBOM)
+#   • CycloneDX format support
+#   • SPDX format support
+#   • JSON output option
+# - License scanning
+#
+# Scan Process:
+# 1. Sets up scanning environment
+# 2. Updates vulnerability database
+# 3. Performs target-specific scans
+# 4. Analyzes dependencies and configurations
+# 5. Generates detailed reports
+# 6. Creates SBOM (if enabled)
+#
+# Scanning Capabilities:
+# - OS package vulnerabilities
+# - Language-specific dependencies
+# - Infrastructure misconfigurations
+# - Sensitive data exposure
+# - Container image analysis
+# - Custom policy evaluation
+#
+# Performance Features:
+# - Efficient caching system
+# - Parallel scanning
+# - Incremental updates
+# - Resource usage optimization
+# - Scan result caching
+#
+# Example Usage:
 #   - uses: ./.github/actions/security/trivy
 #     with:
 #       scan_type: "fs"
 #       scan_target: "./src"
-#       severity: "HIGH,CRITICAL"
 #       scanners: "vuln,secret,config"
-#       format: "sarif"
-#       timeout: "5m"
+#       severity: "HIGH,CRITICAL"
+#       generate_sbom: true
+#       sbom_format: "cyclonedx"
+#
+# Note: Requires appropriate permissions for container scanning
+# and sufficient disk space for vulnerability database.
+# Consider using result caching for improved performance in CI/CD pipelines.
 
 name: "Trivy Security Scanner"
 description: "Comprehensive security scanner for vulnerabilities, IaC issues, and secrets"
@@ -57,6 +97,14 @@ inputs:
     description: "Timeout duration (e.g., 5m, 10m)"
     required: false
     default: "10m"
+  generate_sbom:
+    description: "Generate Software Bill of Materials (SBOM)"
+    required: false
+    default: "false"
+  sbom_format:
+    description: "SBOM output format (cyclonedx, spdx, spdx-json)"
+    required: false
+    default: "cyclonedx"
 
 outputs:
   scan_result:
@@ -135,4 +183,13 @@ runs:
         else
           echo "::error::Report file was not generated"
           exit 1
+        fi
+
+        # Generate SBOM if requested
+        if [[ "${{ inputs.generate_sbom }}" == "true" ]]; then
+          echo "Generating SBOM in ${{ inputs.sbom_format }} format"
+          trivy fs \
+            --format ${{ inputs.sbom_format }} \
+            --output "sbom.${{ inputs.sbom_format }}" \
+            ${SCAN_TARGET}
         fi

@@ -1,22 +1,35 @@
 # Bandit Security Scanner Action
 #
-# This action runs the Bandit security scanner on Python code with configurable options.
-# It supports:
-# - Flexible scan scope (all files or only changed)
-# - Customizable severity and confidence thresholds
-# - Multiple output formats for reports
-# - Integration with custom configuration files
-# - Configurable failure conditions based on findings
+# This composite action runs the Bandit security scanner for Python code analysis.
+# It provides comprehensive security scanning with configurable severity levels,
+# scoping options, and reporting formats.
 #
-# Example usage:
+# Features:
+# - Flexible scan scope (all files or only changed)
+# - Configurable severity and confidence thresholds
+# - Multiple output formats for reporting
+# - Integration with custom configuration files
+# - Caching of scan results
+# - Support for pyproject.toml configuration
+#
+# Scan Process:
+# 1. Sets up Python environment
+# 2. Installs Bandit with TOML support
+# 3. Determines files to scan based on scope
+# 4. Executes scan with configured options
+# 5. Generates report in specified format
+#
+# Example Usage:
 #   - uses: ./.github/actions/security/bandit
 #     with:
-#       scan_scope: "all"
+#       scan_scope: "changed"
 #       severity_level: "MEDIUM"
+#       output_format: "json"
 #       fail_on_findings: true
 #
-# Part of the security scanning workflow that helps identify potential
-# security vulnerabilities in Python code early in the development process.
+# Note: For optimal results, configure Bandit settings in pyproject.toml
+# or provide a custom configuration file.
+
 name: "Bandit Security Scan"
 description: "Runs Bandit security scanner with configurable options"
 

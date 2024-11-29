@@ -1,18 +1,29 @@
 # Reusable Code Quality Workflow
 #
-# This reusable workflow runs various code quality checks including:
-# - Pre-commit hooks
-# - Linting
-# - Style checks
-# - Type checking
+# This reusable workflow runs various code quality checks using
+# pre-commit hooks and other quality assurance tools.
 #
-# Example usage:
+# Features:
+# - Pre-commit hook execution
+# - Multiple language support
+# - Configurable environments
+# - Caching for performance
+#
+# Quality Checks:
+# - Linting
+# - Formatting
+# - Type checking
+# - Style enforcement
+#
+# Example Usage:
 #   jobs:
-#     quality-checks:
+#     quality:
 #       uses: ./.github/workflows/_reusable-code-quality.yaml
 #       with:
 #         python-version: "3.11"
 #         node-version: "20.0.0"
+#
+# Note: Requires configured pre-commit hooks in repository
 
 name: Reusable Code Quality
 
