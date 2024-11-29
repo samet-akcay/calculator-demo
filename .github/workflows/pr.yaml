@@ -1,18 +1,42 @@
 # Pull Request Checks Workflow
 #
-# This workflow runs various checks on pull requests including:
-# - Code quality checks (linting, style, type checking)
-# - Test suite (unit and integration tests)
-# - Security scans (bandit and semgrep)
+# This workflow orchestrates various quality and security checks for pull requests.
+# It uses reusable workflows to maintain modularity and consistency across checks.
+#
+# Workflow Components:
+# 1. Code Quality Checks:
+#    - Linting and style verification
+#    - Type checking
+#    - Pre-commit hook validation
+#
+# 2. Test Suite:
+#    - Unit tests with parallelization
+#    - Integration tests
+#    - Coverage reporting to Codecov
+#
+# 3. Security Scanning:
+#    - Bandit for Python security checks
+#    - Semgrep for static analysis
+#    - Scans only changed files for efficiency
 #
 # Triggers:
-# - On pull requests to main branch
-# - On pull requests to feature/* branches
+# - Pull requests to main branch
+# - Pull requests to feature/* branches
 #
-# Uses reusable workflows for:
-# - Code quality (./.github/workflows/_reusable-code-quality.yaml)
-# - Test suite (./.github/workflows/_reusable-test-suite.yaml)
-# - Security scanning (./.github/workflows/_reusable-security-scan.yaml)
+# Configuration:
+# - Uses concurrent run management to prevent redundant executions
+# - Cancels outdated runs when new commits are pushed
+# - Configurable Python and Node.js versions
+# - Adjustable security scan severity levels
+#
+# Required Secrets:
+# - CODECOV_TOKEN: Token for uploading coverage reports
+#
+# Example Usage:
+# When a PR is created or updated, this workflow will:
+# 1. Run code quality checks with Python 3.10 and Node 18.15.0
+# 2. Execute the full test suite (unit + integration)
+# 3. Perform security scans on changed files with MEDIUM severity threshold
 
 name: PR Checks
 
@@ -20,13 +44,19 @@ on:
   pull_request:
     branches: [main, "feature/**"]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # Code quality job using reusable workflow
   quality:
     uses: ./.github/workflows/_reusable-code-quality.yaml
     with:
       python-version: "3.10"
       node-version: "18.15.0"
 
+  # Test suite job using reusable workflow
   tests:
     uses: ./.github/workflows/_reusable-test-suite.yaml
     with:
@@ -34,10 +64,11 @@ jobs:
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
+  # Security scanning job using reusable workflow
   security:
-    needs: [quality]
+    needs: [] # No dependencies, can run in parallel
     uses: ./.github/workflows/_reusable-security-scan.yaml
     with:
-      tools: "bandit,semgrep"
-      scan-scope: "changed"
-      severity-level: "MEDIUM"
+      tools: "bandit,semgrep" # Security tools to run
+      scan-scope: "changed" # Only scan changed files
+      severity-level: "MEDIUM" # Minimum severity to report

@@ -1,19 +1,34 @@
 # Reusable Release Publisher Workflow
 #
-# This reusable workflow publishes Python packages to PyPI and creates GitHub releases.
-# It supports both production releases and pre-releases to Test PyPI.
+# This reusable workflow handles the publication of Python packages to PyPI
+# and GitHub releases. It supports both production releases and pre-releases
+# with configurable options.
 #
-# Example usage:
+# Features:
+# - PyPI package publishing
+# - GitHub release creation
+# - Pre-release support
+# - Release notes generation
+# - Artifact management
+#
+# Publication Process:
+# 1. Downloads build artifacts
+# 2. Publishes package to PyPI
+# 3. Creates GitHub release
+# 4. Attaches artifacts to release
+#
+# Example Usage:
 #   jobs:
-#     publish-release:
+#     publish:
 #       uses: ./.github/workflows/_reusable-release-publisher.yaml
 #       with:
-#         version: "1.0.0"
+#         version: "v1.0.0"
 #         artifact-name: "dist-123456789"
 #         is-prerelease: false
 #       secrets:
 #         pypi-token: ${{ secrets.PYPI_TOKEN }}
-#         test-pypi-token: ${{ secrets.TEST_PYPI_TOKEN }}
+#
+# Note: Requires PyPI token for package publishing
 
 name: Reusable Release Publisher
 

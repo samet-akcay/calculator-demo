@@ -1,21 +1,33 @@
 # Reusable Test Suite Workflow
 #
-# This reusable workflow runs various types of tests including:
-# - Unit tests
-# - Integration tests
-# With configurable Python versions, timeouts, and test types.
+# This reusable workflow executes the test suite with configurable
+# options for different test types and environments.
 #
-# Example usage:
+# Features:
+# - Unit test execution
+# - Integration test execution
+# - Coverage reporting
+# - Test parallelization
+# - Configurable timeouts
+#
+# Test Process:
+# 1. Sets up test environment
+# 2. Runs unit tests
+# 3. Runs integration tests
+# 4. Generates coverage reports
+# 5. Uploads test results
+#
+# Example Usage:
 #   jobs:
-#     run-tests:
+#     tests:
 #       uses: ./.github/workflows/_reusable-test-suite.yaml
 #       with:
-#         python-version: "3.11"
 #         test-types: "unit,integration"
-#         unit-test-timeout: 15
-#         integration-test-timeout: 45
+#         python-version: "3.11"
 #       secrets:
 #         codecov-token: ${{ secrets.CODECOV_TOKEN }}
+#
+# Note: Requires properly configured pytest environment
 
 name: Reusable Test Suite
 

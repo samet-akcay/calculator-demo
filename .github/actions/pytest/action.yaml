@@ -1,19 +1,38 @@
 # Python Tests Runner Action
 #
-# This action executes Python tests using pytest, with support for:
-# - Unit and integration test separation
-# - Test coverage reporting and enforcement
-# - Automatic test performance analysis
-# - Codecov integration
-# - Configurable timeouts and test environments
+# This composite action executes Python tests using pytest with comprehensive
+# configuration options and reporting capabilities. It supports different test types,
+# parallel execution, and coverage reporting.
 #
-# Example usage:
+# Features:
+# - Separate unit and integration test execution
+# - Automatic test parallelization
+# - Performance analysis and reporting
+# - Coverage tracking and reporting
+# - Configurable timeouts and environments
+# - Codecov integration
+#
+# Test Environment:
+# - Uses virtual environment for isolation
+# - Installs package with dev dependencies
+# - Configures pytest for optimal execution
+#
+# Performance Features:
+# - Automatic parallel test execution (-n auto)
+# - Duration reporting for slow tests
+# - Configurable timeouts
+# - JSON report generation
+#
+# Example Usage:
 #   - uses: ./.github/actions/pytest
 #     with:
-#       python-version: "3.10"
+#       python-version: "3.11"
 #       test-type: "unit"
-#       codecov-token: ${{ secrets.CODECOV_TOKEN }}
 #       max-test-time: "600"
+#       codecov-token: ${{ secrets.CODECOV_TOKEN }}
+#
+# Note: Requires a properly configured pyproject.toml with test dependencies
+# and pytest configuration.
 
 name: "Python Tests Runner"
 description: "Runs Python unit and integration tests with pytest and uploads coverage to Codecov"
@@ -54,7 +73,7 @@ runs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ inputs.python-version }}
-        cache: pip  # Enable pip caching
+        cache: pip # Enable pip caching
         cache-dependency-path: pyproject.toml
 
     # Create and configure virtual environment
@@ -117,7 +136,7 @@ runs:
 
     # Analyze and report test performance
     - name: Analyze test performance
-      if: always()  # Run even if tests fail
+      if: always() # Run even if tests fail
       shell: bash
       run: |
         echo "Test Duration: ${{ steps.test-execution.outputs.duration }} seconds"
