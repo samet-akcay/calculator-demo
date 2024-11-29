@@ -73,7 +73,7 @@ runs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ inputs.python-version }}
-        cache: pip  # Enable pip caching
+        cache: pip # Enable pip caching
         cache-dependency-path: pyproject.toml
 
     # Create and configure virtual environment
@@ -136,7 +136,7 @@ runs:
 
     # Analyze and report test performance
     - name: Analyze test performance
-      if: always()  # Run even if tests fail
+      if: always() # Run even if tests fail
       shell: bash
       run: |
         echo "Test Duration: ${{ steps.test-execution.outputs.duration }} seconds"
