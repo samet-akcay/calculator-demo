@@ -1,3 +1,22 @@
+# Bandit Security Scanner Action
+#
+# This action runs the Bandit security scanner on Python code with configurable options.
+# It supports:
+# - Flexible scan scope (all files or only changed)
+# - Customizable severity and confidence thresholds
+# - Multiple output formats for reports
+# - Integration with custom configuration files
+# - Configurable failure conditions based on findings
+#
+# Example usage:
+#   - uses: ./.github/actions/security/bandit
+#     with:
+#       scan_scope: "all"
+#       severity_level: "MEDIUM"
+#       fail_on_findings: true
+#
+# Part of the security scanning workflow that helps identify potential
+# security vulnerabilities in Python code early in the development process.
 name: "Bandit Security Scan"
 description: "Runs Bandit security scanner with configurable options"
 

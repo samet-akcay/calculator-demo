@@ -1,3 +1,17 @@
+# Reusable Version Check Workflow
+#
+# This reusable workflow validates version strings and determines if they are pre-releases.
+# It supports both explicit version inputs and versions from git tags.
+# Valid version formats: vX.Y.Z or vX.Y.Z-rcN (for release candidates)
+#
+# Example usage:
+#   jobs:
+#     check-version:
+#       uses: ./.github/workflows/_reusable-version-check.yaml
+#       with:
+#         version: "v1.2.3"
+#         allow-prerelease: false
+
 name: Reusable Version Check
 
 on:

@@ -1,3 +1,22 @@
+# Reusable Test Suite Workflow
+#
+# This reusable workflow runs various types of tests including:
+# - Unit tests
+# - Integration tests
+# With configurable Python versions, timeouts, and test types.
+#
+# Example usage:
+#   jobs:
+#     run-tests:
+#       uses: ./.github/workflows/_reusable-test-suite.yaml
+#       with:
+#         python-version: "3.11"
+#         test-types: "unit,integration"
+#         unit-test-timeout: 15
+#         integration-test-timeout: 45
+#       secrets:
+#         codecov-token: ${{ secrets.CODECOV_TOKEN }}
+
 name: Reusable Test Suite
 
 on:

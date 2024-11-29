@@ -1,3 +1,21 @@
+# Reusable Security Scan Workflow
+#
+# This reusable workflow runs various security scanning tools including:
+# - Bandit (Python security linter)
+# - ClamAV (Antivirus scanner)
+# - Semgrep (Static application security testing)
+# - Trivy (Vulnerability and misconfiguration scanner)
+#
+# Example usage:
+#   jobs:
+#     security-scan:
+#       uses: ./.github/workflows/_reusable-security-scan.yaml
+#       with:
+#         tools: "bandit,semgrep,trivy"
+#         scan-scope: "changed"
+#         severity-level: "MEDIUM"
+#         fail-on-findings: true
+
 name: Reusable Security Scan
 
 on:

@@ -1,3 +1,22 @@
+# Semgrep Security Scanner Action
+#
+# This action runs the Semgrep static application security testing (SAST) scanner with configurable options.
+# It supports:
+# - Flexible scan scope (all files or only changed)
+# - Customizable rule sets and configurations
+# - Multiple severity levels and reporting formats
+# - Configurable timeouts and failure conditions
+#
+# Example usage:
+#   - uses: ./.github/actions/security/semgrep
+#     with:
+#       scan_scope: "all"
+#       paths: "./src"
+#       config: "p/owasp-top-ten"
+#       severity: "WARNING"
+#       fail_on_findings: true
+#       output_format: "sarif"
+
 name: "Semgrep SAST Scan"
 description: "Runs Semgrep security scanner with configurable options"
 

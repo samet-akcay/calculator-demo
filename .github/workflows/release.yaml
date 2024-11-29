@@ -1,3 +1,20 @@
+# Release Workflow
+#
+# This workflow handles the release process for the package, including:
+# - Version validation (using _reusable-version-check.yaml)
+# - Code quality checks (using _reusable-code-quality.yaml)
+# - Test suite execution (using _reusable-test-suite.yaml)
+# - Security scanning (using _reusable-security-scan.yaml)
+#
+# Triggers:
+# - On push of version tags (v*.*.* or v*.*.*-rc*)
+# - Manual workflow dispatch with version input
+#
+# Supports:
+# - Production releases (vX.Y.Z)
+# - Pre-releases (vX.Y.Z-rcN)
+# - Dry run mode for testing
+
 name: Release
 
 on:

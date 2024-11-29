@@ -1,3 +1,16 @@
+# Reusable Artifact Builder Workflow
+#
+# This reusable workflow builds Python packages and uploads them as artifacts.
+# It supports configurable Python versions and optional package verification.
+#
+# Example usage:
+#   jobs:
+#     build-package:
+#       uses: ./.github/workflows/_reusable-artifact-builder.yaml
+#       with:
+#         python-version: "3.11"
+#         verify-package: true
+
 name: Reusable Artifact Builder
 
 on:

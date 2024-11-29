@@ -1,3 +1,20 @@
+# Python Tests Runner Action
+#
+# This action executes Python tests using pytest, with support for:
+# - Unit and integration test separation
+# - Test coverage reporting and enforcement
+# - Automatic test performance analysis
+# - Codecov integration
+# - Configurable timeouts and test environments
+#
+# Example usage:
+#   - uses: ./.github/actions/pytest
+#     with:
+#       python-version: "3.10"
+#       test-type: "unit"
+#       codecov-token: ${{ secrets.CODECOV_TOKEN }}
+#       max-test-time: "600"
+
 name: "Python Tests Runner"
 description: "Runs Python unit and integration tests with pytest and uploads coverage to Codecov"
 
@@ -32,23 +49,28 @@ outputs:
 runs:
   using: composite
   steps:
+    # Set up Python with pip caching
     - name: Set up Python environment
       uses: actions/setup-python@v5
       with:
         python-version: ${{ inputs.python-version }}
-        cache: pip
+        cache: pip  # Enable pip caching
         cache-dependency-path: pyproject.toml
 
+    # Create and configure virtual environment
     - name: Configure virtual environment
       id: setup-venv
       shell: bash
       run: |
+        # Create isolated test environment
         python -m venv .venv
         source .venv/bin/activate
+        # Install dependencies with dev extras
         python -m pip install --upgrade pip
         pip install ".[dev]"
         pip install codecov
 
+    # Determine which tests to run based on input
     - name: Determine test scope
       id: test-scope
       shell: bash
@@ -61,10 +83,12 @@ runs:
             echo "path=tests/integration" >> $GITHUB_OUTPUT
             ;;
           *)
+            # Run both test types if not specified
             echo "path=tests/unit tests/integration" >> $GITHUB_OUTPUT
             ;;
         esac
 
+    # Execute test suite with performance tracking
     - name: Execute test suite
       id: test-execution
       shell: bash
@@ -72,6 +96,11 @@ runs:
         source .venv/bin/activate
         start_time=$(date +%s)
 
+        # Run pytest with:
+        # - Auto parallel execution (-n auto)
+        # - Duration reporting for slow tests
+        # - Configurable timeout
+        # - JSON report generation
         PYTHONPATH=src pytest ${{ steps.test-scope.outputs.path }} \
           -n auto \
           --durations=10 \
@@ -81,28 +110,34 @@ runs:
           && echo "success=true" >> $GITHUB_OUTPUT \
           || echo "success=false" >> $GITHUB_OUTPUT
 
+        # Calculate total test duration
         end_time=$(date +%s)
         duration=$((end_time - start_time))
         echo "duration=${duration}" >> $GITHUB_OUTPUT
 
+    # Analyze and report test performance
     - name: Analyze test performance
-      if: always()
+      if: always()  # Run even if tests fail
       shell: bash
       run: |
         echo "Test Duration: ${{ steps.test-execution.outputs.duration }} seconds"
 
+        # Report slowest tests for optimization
         echo "Top 10 slowest tests:"
         cat pytest.json | jq -r '.tests[] | select(.duration >= 1) | "\(.duration)s \(.name)"' | sort -rn | head -n 10
 
+        # Warn if tests exceed time limit
         if [ "${{ steps.test-execution.outputs.duration }}" -gt "${{ inputs.max-test-time }}" ]; then
           echo "::warning::Test suite exceeded recommended duration of ${{ inputs.max-test-time }} seconds"
         fi
 
+    # Upload coverage data to Codecov
     - name: Upload coverage to Codecov
       if: steps.test-execution.outputs.success == 'true'
       shell: bash
       run: |
         source .venv/bin/activate
+        # Upload with test type and Python version tags
         codecov --token "${{ inputs.codecov-token }}" \
                 --file coverage.xml \
                 --flags "${{ inputs.test-type }}_py${{ inputs.python-version }}" \

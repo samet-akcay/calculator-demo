@@ -1,3 +1,22 @@
+# Trivy Security Scanner Action
+#
+# This action runs the Trivy security scanner for comprehensive security analysis including:
+# - Vulnerability scanning for dependencies
+# - Infrastructure as Code (IaC) security checks
+# - Container image scanning
+# - Secret detection
+# - Misconfiguration detection
+#
+# Example usage:
+#   - uses: ./.github/actions/security/trivy
+#     with:
+#       scan_type: "fs"
+#       scan_target: "./src"
+#       severity: "HIGH,CRITICAL"
+#       scanners: "vuln,secret,config"
+#       format: "sarif"
+#       timeout: "5m"
+
 name: "Trivy Security Scanner"
 description: "Comprehensive security scanner for vulnerabilities, IaC issues, and secrets"
 

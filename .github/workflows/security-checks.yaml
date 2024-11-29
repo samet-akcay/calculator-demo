@@ -1,3 +1,22 @@
+# Security Checks Workflow
+#
+# This workflow runs various security scanning tools including:
+# - Bandit (Python security linter)
+# - ClamAV (Antivirus scanner)
+# - Semgrep (Static analysis)
+# - Trivy (Container and dependency scanner)
+#
+# Can be used as:
+# - A reusable workflow (workflow_call)
+# - A manually triggered workflow (workflow_dispatch)
+#
+# Configurable options:
+# - Tools to run
+# - Scan scope (all files or changed only)
+# - Minimum severity level
+# - Failure conditions
+# - Custom scan paths
+
 name: Security Checks
 on:
   workflow_call:

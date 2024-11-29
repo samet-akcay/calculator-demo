@@ -1,3 +1,22 @@
+# ClamAV Security Scanner Action
+#
+# This action runs the ClamAV antivirus scanner on repository files with configurable options.
+# It supports:
+# - Flexible scan scope (all files or only changed)
+# - Customizable file and scan size limits
+# - Multiple output formats for reports
+# - Directory exclusion patterns
+# - Configurable failure conditions based on findings
+#
+# Example usage:
+#   - uses: ./.github/actions/security/clamav
+#     with:
+#       scan_scope: "all"
+#       paths: "./src"
+#       exclude_dirs: ".git,node_modules,venv"
+#       max_file_size: "50"
+#       fail_on_findings: true
+
 name: "ClamAV Security Scan"
 description: "Runs ClamAV antivirus scanner with configurable options"
 
