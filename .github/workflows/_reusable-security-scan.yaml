@@ -60,19 +60,15 @@ jobs:
   security:
     strategy:
       matrix:
-        tool: ${{ fromJson('["' + join(split(inputs.tools, ','), '","') + '"]') }}
+        tool:
+          - bandit
+          - semgrep
+          - trivy
+          - clamav
+    if: contains(inputs.tools, matrix.tool)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Validate security tools
-        shell: bash
-        run: |
-          if [[ ! "${{ matrix.tool }}" =~ ^(bandit|semgrep|trivy|clamav)$ ]]; then
-            echo "Error: Invalid security tool specified: ${{ matrix.tool }}"
-            echo "Valid tools are: bandit, semgrep, trivy, clamav"
-            exit 1
-          fi
 
       - name: Run ${{ matrix.tool }} scan
         uses: ./.github/actions/security/${{ matrix.tool }}
