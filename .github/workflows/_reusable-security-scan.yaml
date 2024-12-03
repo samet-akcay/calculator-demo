@@ -1,47 +1,40 @@
 # Reusable Security Scan Workflow
 #
-# This reusable workflow orchestrates multiple security scanning tools to provide
-# comprehensive security analysis of the codebase. It integrates various specialized
-# scanners for different security aspects.
+# A configurable workflow for running security scans using multiple tools.
+# Supports selective tool execution and parallel processing for efficiency.
 #
 # Features:
-# - Multi-tool Security Analysis
-#   • Bandit for Python security
-#   • ClamAV for malware detection
-#   • Semgrep for SAST
-#   • Trivy for vulnerabilities
+# - Selective Security Tool Execution
+#   • Semgrep: Static Application Security Testing (SAST)
+#   • Bandit: Python-specific security linting
+#   • Trivy: Container and dependency scanning
+#   • ClamAV: Malware detection
 #
-# Scanning Capabilities:
-# - Code security analysis
-# - Dependency vulnerability checks
-# - Infrastructure as Code scanning
-# - Malware detection
-# - Secret detection
-# - Container security
+# Configuration Options:
+# - tools: Comma-separated list of tools to run (required)
+#   Example: "semgrep,bandit,trivy"
 #
-# Execution Modes:
-# - Full repository scan
-# - Changed files only
-# - Configurable tool selection
-# - Adjustable severity levels
+# - scan-scope: Scope of the security scan (default: "changed")
+#   • "changed": Only scan modified files
+#   • "all": Scan entire codebase
 #
-# Performance Features:
-# - Parallel tool execution
-# - Scan result caching
-# - Incremental scanning
-# - Resource optimization
+# - severity-level: Minimum severity to report (default: "LOW")
+#   • "LOW": Report all issues
+#   • "MEDIUM": Filter out low severity issues
+#   • "HIGH": Only report high severity issues
 #
 # Example Usage:
-#   jobs:
-#     security:
-#       uses: ./.github/workflows/_reusable-security-scan.yaml
-#       with:
-#         tools: "bandit,semgrep,trivy"
-#         scan-scope: "changed"
-#         severity-level: "MEDIUM"
+#   security:
+#     uses: ./.github/workflows/_reusable-security-scan.yaml
+#     with:
+#       tools: "semgrep"
+#       scan-scope: "changed"
+#       severity-level: "MEDIUM"
 #
-# Note: Different security tools may require specific permissions
-# or configurations. Results are preserved as workflow artifacts.
+# Results:
+# - Each tool's results are uploaded as workflow artifacts
+# - Results are stored in security-results/<tool-name>
+# - Artifacts are retained for 7 days
 
 name: Reusable Security Scan
 
@@ -65,23 +58,20 @@ on:
 
 jobs:
   security:
-    strategy:
-      matrix:
-        tool:
-          - bandit
-          - semgrep
-          - trivy
-          - clamav
-        exclude:
-          - tool: bandit
-            ${{ !contains(inputs.tools, 'bandit') }}
-          - tool: semgrep
-            ${{ !contains(inputs.tools, 'semgrep') }}
-          - tool: trivy
-            ${{ !contains(inputs.tools, 'trivy') }}
-          - tool: clamav
-            ${{ !contains(inputs.tools, 'clamav') }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false  # Continue running other tools if one fails
+      matrix:
+        include:
+          - tool: bandit
+            run: ${{ contains(inputs.tools, 'bandit') }}
+          - tool: semgrep
+            run: ${{ contains(inputs.tools, 'semgrep') }}
+          - tool: trivy
+            run: ${{ contains(inputs.tools, 'trivy') }}
+          - tool: clamav
+            run: ${{ contains(inputs.tools, 'clamav') }}
+    if: ${{ matrix.run }}
     steps:
       - uses: actions/checkout@v4
 
