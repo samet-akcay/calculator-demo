@@ -240,6 +240,20 @@ jobs:
           FINAL_VERSION=$(echo "${{ needs.version.outputs.version }}" | sed 's/-rc.*//')
           echo "version=${FINAL_VERSION}" >> $GITHUB_OUTPUT
 
+      - name: Record approved RC
+        if: success()
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          FINAL_VERSION="${VERSION%-rc*}"
+
+          # Store approval in GitHub environment
+          gh api -X PUT /repos/${{ github.repository }}/environments/production/approved-rc \
+            -f version="$VERSION" \
+            -f approved_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+            -f approval_workflow="${{ github.run_id }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Display release checklist
         run: |
           echo "Final Release Approval Required"
@@ -251,9 +265,49 @@ jobs:
           echo "✓ QA Validation: Passed"
           echo "✓ Product Review: Approved"
 
+  # Validate release readiness for production release
+  validate-release-readiness:
+    runs-on: ubuntu-latest
+    needs: [version]
+    if: "!contains(needs.version.outputs.version, '-rc')"
+    steps:
+      - name: Check for approved RC
+        id: check-rc
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+
+          # Get the most recent RC for this version
+          RC_TAG=$(git tag -l "v${VERSION%-*}-rc*" --sort=-v:refname | head -n1)
+
+          if [ -z "$RC_TAG" ]; then
+            echo "::error::No release candidate found for version $VERSION"
+            echo "Please create and approve an RC first"
+            exit 1
+          fi
+
+          # Check if RC was approved by verifying workflow status
+          WORKFLOW_ID=$(gh api repos/${{ github.repository }}/actions/workflows/release.yaml -q '.id')
+          RC_RUN=$(gh run list --workflow $WORKFLOW_ID --branch $RC_TAG --json conclusion,databaseId -q '.[] | select(.conclusion=="success") | .databaseId' | head -n1)
+
+          if [ -z "$RC_RUN" ]; then
+            echo "::error::No successful release workflow found for RC $RC_TAG"
+            exit 1
+          fi
+
+          # Verify all required approvals were obtained
+          APPROVALS=$(gh api repos/${{ github.repository }}/actions/runs/$RC_RUN/jobs -q '.jobs[] | select(.name | contains("approval")) | .conclusion')
+          if [[ ! "$APPROVALS" =~ "success" ]]; then
+            echo "::error::RC $RC_TAG has not completed the approval process"
+            exit 1
+          fi
+
+          echo "rc_tag=$RC_TAG" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   # Production Release Stage
   prepare-release:
-    needs: [version, build]
+    needs: [version, build, validate-release-readiness]  # Add validation dependency
     if: |
       !contains(needs.version.outputs.version, '-rc') &&
       !failure() && !cancelled()
