@@ -7,7 +7,7 @@
 # - Pre-commit hook execution
 # - Multiple language support
 # - Configurable environments
-# - Caching for performance
+# - Status reporting
 #
 # Quality Checks:
 # - Linting
@@ -22,6 +22,7 @@
 #       with:
 #         python-version: "3.11"
 #         node-version: "20.0.0"
+#         skip: "black,flake8"  # Optional: skip specific hooks
 #
 # Note: Requires configured pre-commit hooks in repository
 
@@ -38,16 +39,56 @@ on:
         description: "Node.js version for checks"
         type: string
         default: "18.15.0"
+      skip:
+        description: "Comma-separated list of hooks to skip"
+        type: string
+        default: ""
+      timeout-minutes:
+        description: "Timeout in minutes for the entire job"
+        type: number
+        default: 5
+    outputs:
+      status:
+        description: "Status of quality checks"
+        value: ${{ jobs.pre-commit.outputs.status }}
 
 jobs:
   pre-commit:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    outputs:
+      status: ${{ steps.quality-check.conclusion }}
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: ./.github/actions/code-quality/pre-commit
+
+      - name: Run pre-commit checks
+        id: quality-check
+        uses: ./.github/actions/code-quality/pre-commit
         with:
           python-version: ${{ inputs.python-version }}
           node-version: ${{ inputs.node-version }}
+          skip: ${{ inputs.skip }}
+          cache: "true"
+
+      - name: Generate Quality Report
+        if: always()
+        run: |
+          echo "## Code Quality Check Results" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ steps.quality-check.conclusion }}" == "success" ]]; then
+            echo "✅ All quality checks passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Some quality checks failed" >> $GITHUB_STEP_SUMMARY
+            echo "### Failed Checks" >> $GITHUB_STEP_SUMMARY
+            echo "Check the job logs for detailed information about failed checks." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "### Environment" >> $GITHUB_STEP_SUMMARY
+          echo "- Python Version: ${{ inputs.python-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Node Version: ${{ inputs.node-version }}" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ inputs.skip }}" != "" ]]; then
+            echo "- Skipped Hooks: ${{ inputs.skip }}" >> $GITHUB_STEP_SUMMARY
+          fi
