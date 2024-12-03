@@ -62,7 +62,7 @@ jobs:
     needs: [version]
     uses: ./.github/workflows/_reusable-security-scan.yaml
     with:
-      tools: "bandit,semgrep,trivy"
+      tools: "bandit,semgrep,trivy,clamav"
       scan-scope: "all"
       severity-level: "LOW"
       fail-on-findings: true

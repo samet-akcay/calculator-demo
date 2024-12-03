@@ -2,5 +2,5 @@
 
 from calculator.operations import add, divide, multiply, subtract
 
-__version__ = "0.2.0-rc7"
+__version__ = "0.3.0-rc1"
 __all__ = ["add", "subtract", "multiply", "divide"]
