@@ -1,0 +1,24 @@
+name: 'Validate Security Tools'
+description: 'Validates the selected security tools'
+
+inputs:
+  tools:
+    description: 'Comma-separated list of security tools to validate'
+    required: true
+
+outputs:
+  valid_tools:
+    description: 'List of validated security tools'
+    value: ${{ inputs.tools }}
+
+runs:
+  using: composite
+  steps:
+    - name: Validate tools
+      shell: bash
+      run: |
+        if [[ ! "${{ inputs.tools }}" =~ ^(bandit|semgrep|trivy|clamav)(,(bandit|semgrep|trivy|clamav))*$ ]]; then
+          echo "Error: Invalid security tools specified: ${{ inputs.tools }}"
+          echo "Valid tools are: bandit, semgrep, trivy, clamav"
+          exit 1
+        fi

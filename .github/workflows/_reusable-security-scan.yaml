@@ -49,9 +49,11 @@ on:
   workflow_call:
     inputs:
       tools:
-        description: "Security tools to run (comma-separated: bandit,clamav,semgrep,trivy)"
+        description: |
+          Security tools to run (comma-separated)
+          Valid options: bandit, semgrep, trivy, clamav
         type: string
-        default: "bandit,semgrep"
+        required: true
       scan-scope:
         description: "Scan scope (all/changed)"
         type: string
@@ -60,127 +62,43 @@ on:
         description: "Minimum severity level (LOW/MEDIUM/HIGH)"
         type: string
         default: "LOW"
-      fail-on-findings:
-        description: "Fail workflow if issues found"
-        type: boolean
-        default: true
-    outputs:
-      has-findings:
-        description: "Whether any security issues were found"
-        value: ${{ jobs.summarize.outputs.has_findings }}
 
 jobs:
-  bandit:
-    if: contains(inputs.tools, 'bandit')
+  security:
+    strategy:
+      matrix:
+        tool:
+          - bandit
+          - semgrep
+          - trivy
+          - clamav
+        exclude:
+          - tool: bandit
+            ${{ !contains(inputs.tools, 'bandit') }}
+          - tool: semgrep
+            ${{ !contains(inputs.tools, 'semgrep') }}
+          - tool: trivy
+            ${{ !contains(inputs.tools, 'trivy') }}
+          - tool: clamav
+            ${{ !contains(inputs.tools, 'clamav') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Run Bandit scan
-        uses: ./.github/actions/security/bandit
+
+      - name: Validate security tools
+        uses: ./.github/actions/security/validate-tools
+        with:
+          tools: ${{ inputs.tools }}
+
+      - name: Run ${{ matrix.tool }} scan
+        uses: ./.github/actions/security/${{ matrix.tool }}
         with:
           scan-scope: ${{ inputs.scan-scope }}
           severity-level: ${{ inputs.severity-level }}
-          fail-on-findings: ${{ inputs.fail-on-findings }}
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: bandit-results
-          path: security-results/bandit
-          retention-days: 7
-
-  semgrep:
-    if: contains(inputs.tools, 'semgrep')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run Semgrep scan
-        uses: ./.github/actions/security/semgrep
-        with:
-          scan-scope: ${{ inputs.scan-scope }}
-          severity-level: ${{ inputs.severity-level }}
-          fail-on-findings: ${{ inputs.fail-on-findings }}
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: semgrep-results
-          path: security-results/semgrep
-          retention-days: 7
-
-  trivy:
-    if: contains(inputs.tools, 'trivy')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Required for changed files detection
-
-      - name: Run Trivy scan
-        id: trivy
-        uses: ./.github/actions/security/trivy
-        with:
-          scan_type: "fs"
-          scan_scope: ${{ inputs.scan-scope }}
-          severity: ${{ inputs.severity-level }},HIGH,CRITICAL
-          scanners: "vuln,secret"
-          format: "sarif"
-          timeout: "15m"
-          ignore_unfixed: "true"
-
-      - name: Move Trivy results
-        if: always() && steps.trivy.outputs.report_path
-        run: |
-          mkdir -p security-results/trivy
-          mv ${{ steps.trivy.outputs.report_path }} security-results/trivy/
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: trivy-results
-          path: security-results/trivy
-          retention-days: 7
-
-  clamav:
-    if: contains(inputs.tools, 'clamav')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run ClamAV scan
-        uses: ./.github/actions/security/clamav
-        with:
-          scan-scope: ${{ inputs.scan-scope }}
-          fail-on-findings: ${{ inputs.fail-on-findings }}
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: clamav-results
-          path: security-results/clamav
-          retention-days: 7
-
-  summarize:
-    needs: [bandit, semgrep, trivy, clamav]
-    if: always()
-    runs-on: ubuntu-latest
-    outputs:
-      has_findings: ${{ steps.check-findings.outputs.has_findings }}
-    steps:
-      - id: check-findings
-        run: |
-          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
-            echo "has_findings=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_findings=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Download all results
-        uses: actions/download-artifact@v4
-        with:
-          pattern: "*-results"
-          merge-multiple: true
-          path: all-results
-
-      - name: Upload combined results
-        uses: actions/upload-artifact@v4
-        with:
-          name: security-scan-results
-          path: all-results
+          name: ${{ matrix.tool }}-results
+          path: security-results/${{ matrix.tool }}
           retention-days: 7
