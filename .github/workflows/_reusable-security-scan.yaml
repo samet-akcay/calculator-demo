@@ -60,7 +60,7 @@ jobs:
   security:
     strategy:
       matrix:
-        tool: ${{ fromJson(format('[{0}]', replace(inputs.tools, ',', '","'))) }}
+        tool: ${{ fromJson('["' + join(split(inputs.tools, ','), '","') + '"]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
