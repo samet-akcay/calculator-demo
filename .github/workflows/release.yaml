@@ -307,7 +307,7 @@ jobs:
 
   # Production Release Stage
   prepare-release:
-    needs: [version, build, validate-release-readiness]  # Add validation dependency
+    needs: [version, build, validate-release-readiness] # Add validation dependency
     if: |
       !contains(needs.version.outputs.version, '-rc') &&
       !failure() && !cancelled()
