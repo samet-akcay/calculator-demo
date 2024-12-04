@@ -219,91 +219,65 @@ jobs:
     if: contains(needs.version.outputs.version, '-rc')
     environment:
       name: release-approval
-      url: ${{ steps.approval-url.outputs.url }}
     outputs:
       approved-version: ${{ steps.get-approved-version.outputs.version }}
     runs-on: ubuntu-latest
     steps:
-      - name: Show environment info
+      - name: Record RC approval
+        id: record-approval
         run: |
-          echo "Environment: ${{ vars.ENVIRONMENT }}"
-          echo "Release Gate: ${{ vars.RELEASE_GATE }}"
+          RC_VERSION="${{ needs.version.outputs.version }}"
 
-      - name: Generate approval URL
-        id: approval-url
-        run: |
-          echo "url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >> $GITHUB_OUTPUT
+          # Create approval record with metadata
+          mkdir -p .approvals
+          cat > .approvals/rc_approval.json << EOF
+          {
+            "version": "$RC_VERSION",
+            "approved_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "workflow_id": "${{ github.run_id }}",
+            "approver": "${{ github.actor }}",
+            "environment": "${{ github.environment }}"
+          }
+          EOF
 
-      - name: Get approved version
-        id: get-approved-version
-        run: |
-          FINAL_VERSION=$(echo "${{ needs.version.outputs.version }}" | sed 's/-rc.*//')
-          echo "version=${FINAL_VERSION}" >> $GITHUB_OUTPUT
+      - name: Upload approval record
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc-approval-${{ needs.version.outputs.version }}
+          path: .approvals/rc_approval.json
+          retention-days: 90 # Keep approval records for 90 days
 
-      - name: Record approved RC
-        if: success()
-        run: |
-          VERSION="${{ needs.version.outputs.version }}"
-          FINAL_VERSION="${VERSION%-rc*}"
-
-          # Store approval in GitHub environment
-          gh api -X PUT /repos/${{ github.repository }}/environments/production/approved-rc \
-            -f version="$VERSION" \
-            -f approved_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
-            -f approval_workflow="${{ github.run_id }}"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Display release checklist
-        run: |
-          echo "Final Release Approval Required"
-          echo "============================"
-          echo "RC Version: ${{ needs.version.outputs.version }}"
-          echo "Final Version: ${{ steps.get-approved-version.outputs.version }}"
-          echo "Approval Chain:"
-          echo "✓ Technical Review: Approved"
-          echo "✓ QA Validation: Passed"
-          echo "✓ Product Review: Approved"
-
-  # Validate release readiness for production release
   validate-release-readiness:
-    runs-on: ubuntu-latest
     needs: [version]
     if: "!contains(needs.version.outputs.version, '-rc')"
+    runs-on: ubuntu-latest
     steps:
       - name: Check for approved RC
         id: check-rc
         run: |
           VERSION="${{ needs.version.outputs.version }}"
 
-          # Get the most recent RC for this version
-          RC_TAG=$(git tag -l "v${VERSION%-*}-rc*" --sort=-v:refname | head -n1)
+          # Download all RC approval artifacts
+          mkdir -p approvals
+          ARTIFACTS=$(curl -L \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/artifacts")
 
-          if [ -z "$RC_TAG" ]; then
-            echo "::error::No release candidate found for version $VERSION"
-            echo "Please create and approve an RC first"
+          # Look for most recent RC approval
+          RC_ARTIFACT=$(echo "$ARTIFACTS" | jq -r --arg ver "${VERSION%-*}" \
+            '.artifacts[] | select(.name | startswith("rc-approval-v" + $ver + "-rc")) |
+            select(.expired == false) | select(.expired_at == null)' |
+            jq -s 'sort_by(.created_at) | reverse | .[0]')
+
+          if [ -z "$RC_ARTIFACT" ]; then
+            echo "::error::No approved RC found for version $VERSION"
+            echo "Please complete the RC approval process first"
             exit 1
           fi
 
-          # Check if RC was approved by verifying workflow status
-          WORKFLOW_ID=$(gh api repos/${{ github.repository }}/actions/workflows/release.yaml -q '.id')
-          RC_RUN=$(gh run list --workflow $WORKFLOW_ID --branch $RC_TAG --json conclusion,databaseId -q '.[] | select(.conclusion=="success") | .databaseId' | head -n1)
-
-          if [ -z "$RC_RUN" ]; then
-            echo "::error::No successful release workflow found for RC $RC_TAG"
-            exit 1
-          fi
-
-          # Verify all required approvals were obtained
-          APPROVALS=$(gh api repos/${{ github.repository }}/actions/runs/$RC_RUN/jobs -q '.jobs[] | select(.name | contains("approval")) | .conclusion')
-          if [[ ! "$APPROVALS" =~ "success" ]]; then
-            echo "::error::RC $RC_TAG has not completed the approval process"
-            exit 1
-          fi
-
-          echo "rc_tag=$RC_TAG" >> $GITHUB_OUTPUT
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "Found approved RC: $(echo "$RC_ARTIFACT" | jq -r '.name')"
+          echo "Approved at: $(echo "$RC_ARTIFACT" | jq -r '.created_at')"
 
   # Production Release Stage
   prepare-release:
