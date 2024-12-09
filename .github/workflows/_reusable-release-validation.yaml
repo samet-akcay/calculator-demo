@@ -1,0 +1,92 @@
+name: Release Validation
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      python-version:
+        required: true
+        type: string
+      node-version:
+        required: true
+        type: string
+      verify-package:
+        required: false
+        type: boolean
+        default: true
+      dry-run:
+        required: false
+        type: boolean
+        default: false
+      allow-prerelease:
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      codecov-token:
+        required: true
+    outputs:
+      version:
+        description: "Validated version string"
+        value: ${{ jobs.version-check.outputs.version }}
+      artifact-name:
+        description: "Name of the built artifact"
+        value: ${{ jobs.build.outputs.artifact-name }}
+
+jobs:
+  version-check:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.validate-version.outputs.version }}
+    steps:
+      - name: Validate version
+        id: validate-version
+        run: |
+          VERSION="${{ inputs.version }}"
+          if [[ ! $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$ ]]; then
+            echo "::error::Invalid version format: $VERSION"
+            exit 1
+          fi
+          if [[ $VERSION =~ -rc[0-9]+$ ]] && [[ "${{ inputs.allow-prerelease }}" != "true" ]]; then
+            echo "::error::Pre-release versions not allowed"
+            exit 1
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+  quality:
+    needs: [version-check]
+    uses: ./.github/workflows/_reusable-code-quality.yaml
+    with:
+      python-version: ${{ inputs.python-version }}
+      node-version: ${{ inputs.node-version }}
+
+  tests:
+    needs: [version-check]
+    uses: ./.github/workflows/_reusable-test-suite.yaml
+    with:
+      test-types: "unit,integration"
+      unit-test-timeout: 10
+      integration-test-timeout: 30
+    secrets:
+      codecov-token: ${{ secrets.codecov-token }}
+
+  security:
+    needs: [version-check]
+    uses: ./.github/workflows/_reusable-security-scan.yaml
+    with:
+      tools: "bandit,semgrep,trivy,clamav"
+      scan-scope: "all"
+      severity-level: "LOW"
+      fail-on-findings: true
+
+  build:
+    needs: [version-check, quality, tests, security]
+    if: |
+      !inputs.dry_run &&
+      !failure() && !cancelled()
+    uses: ./.github/workflows/_reusable-artifact-builder.yaml
+    with:
+      python-version: ${{ inputs.python-version }}
+      verify-package: ${{ inputs.verify-package }}

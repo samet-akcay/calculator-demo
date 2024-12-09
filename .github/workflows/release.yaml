@@ -1,19 +1,41 @@
 # Release Workflow
 #
-# This workflow handles the release process for the package, including:
-# - Version validation (using _reusable-version-check.yaml)
-# - Code quality checks (using _reusable-code-quality.yaml)
-# - Test suite execution (using _reusable-test-suite.yaml)
-# - Security scanning (using _reusable-security-scan.yaml)
+# This workflow orchestrates the complete release process for both production and release candidate (RC) versions.
 #
-# Triggers:
-# - On push of version tags (v*.*.* or v*.*.*-rc*)
-# - Manual workflow dispatch with version input
+# Key Components:
+# 1. Validation:
+#    - Version format and compatibility checks
+#    - Code quality verification
+#    - Test suite execution
+#    - Security scanning
+#    - Package build verification
 #
-# Supports:
-# - Production releases (vX.Y.Z)
-# - Pre-releases (vX.Y.Z-rcN)
-# - Dry run mode for testing
+# 2. Release Candidate (RC) Process:
+#    - Triggered for versions with '-rc' suffix
+#    - Publishes to Test PyPI
+#    - Performs RC-specific validations
+#
+# 3. Production Release Process:
+#    - Triggered for versions without '-rc' suffix
+#    - Publishes to Production PyPI
+#    - Performs production-specific validations
+#
+# Trigger Methods:
+# - Automatically on version tag push:
+#   - Production versions: v*.*.* (e.g., v1.2.3)
+#   - RC versions: v*.*.*-rc* (e.g., v1.2.3-rc1)
+# - Manually via workflow dispatch:
+#   - Requires version input
+#   - Optional dry-run mode for testing
+#
+# Required Secrets:
+# - CODECOV_TOKEN: For coverage reporting
+# - TEST_PYPI_TOKEN: For RC deployments
+# - PYPI_TOKEN: For production deployments
+#
+# Outputs:
+# - Release status and validation results
+# - Built artifacts and documentation
 
 name: Release
 
@@ -35,326 +57,43 @@ on:
         default: false
 
 jobs:
-  version:
-    uses: ./.github/workflows/_reusable-version-check.yaml
+  validation:
+    uses: ./.github/workflows/_reusable-release-validation.yaml
     with:
       version: ${{ inputs.version }}
-      allow-prerelease: true
-
-  quality:
-    needs: [version]
-    uses: ./.github/workflows/_reusable-code-quality.yaml
-    with:
       python-version: "3.10"
       node-version: "18.15.0"
-
-  tests:
-    needs: [version]
-    uses: ./.github/workflows/_reusable-test-suite.yaml
-    with:
-      test-types: "unit,integration"
-      unit-test-timeout: 10
-      integration-test-timeout: 30
+      verify-package: true
+      dry-run: ${{ inputs.dry_run }}
+      allow-prerelease: true
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
-  security:
-    needs: [version]
-    uses: ./.github/workflows/_reusable-security-scan.yaml
+  rc-release-process:
+    needs: [validation]
+    if: contains(needs.validation.outputs.version, '-rc')
+    uses: ./.github/workflows/_reusable-rc-release-process.yaml
     with:
-      tools: "bandit,semgrep,trivy,clamav"
-      scan-scope: "all"
-      severity-level: "LOW"
-      fail-on-findings: true
+      version: ${{ needs.validation.outputs.version }}
+      artifact-name: ${{ needs.validation.outputs.artifact-name }}
+    secrets:
+      test-pypi-token: ${{ secrets.TEST_PYPI_TOKEN }}
 
-  build:
-    needs: [version, quality, tests, security]
-    if: |
-      !inputs.dry_run &&
-      !failure() && !cancelled()
-    uses: ./.github/workflows/_reusable-artifact-builder.yaml
+  production-release-process:
+    needs: [validation]
+    if: ${{ !contains(needs.validation.outputs.version, '-rc') }}
+    uses: ./.github/workflows/_reusable-production-release-process.yaml
     with:
-      python-version: "3.10"
-      verify-package: true
-
-  # Stage 1: Technical Review (RC only)
-  technical-review:
-    needs: [version, build]
-    if: contains(needs.version.outputs.version, '-rc')
-    environment:
-      name: technical-review
-      url: ${{ steps.review-url.outputs.url }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Generate review URL
-        id: review-url
-        run: |
-          echo "url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >> $GITHUB_OUTPUT
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ needs.build.outputs.artifact-name }}
-          path: dist
-
-      - name: Show environment info
-        run: |
-          echo "Environment: ${{ vars.ENVIRONMENT }}"
-          echo "Review Level: ${{ vars.REVIEW_LEVEL }}"
-
-      - name: Technical review checklist
-        run: |
-          echo "Technical Review Checklist:"
-          echo "- All tests passed: ${{ needs.tests.result == 'success' }}"
-          echo "- Security checks passed: ${{ needs.security.result == 'success' }}"
-          echo "- Code quality passed: ${{ needs.quality.result == 'success' }}"
-          echo "- Build artifacts verified: ${{ needs.build.result == 'success' }}"
-
-  # Stage 2: QA Validation (RC only)
-  qa-validation:
-    needs: [version, build, technical-review]
-    if: contains(needs.version.outputs.version, '-rc')
-    environment:
-      name: qa-validation
-      url: ${{ steps.qa-url.outputs.url }}
-    runs-on: ubuntu-latest
-    outputs:
-      validation-status: ${{ steps.validate.outputs.status }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Get package name
-        id: get-package-name
-        run: |
-          # Install toml parser
-          pip install tomli
-
-          # Extract package name from pyproject.toml
-          PACKAGE_NAME=$(python -c "import tomli; print(tomli.load(open('pyproject.toml', 'rb'))['project']['name'])")
-          echo "Package name: $PACKAGE_NAME"
-          echo "name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
-
-          # Get the import name (directory under src)
-          IMPORT_NAME=$(ls src/)
-          echo "Import name: $IMPORT_NAME"
-          echo "import_name=$IMPORT_NAME" >> $GITHUB_OUTPUT
-
-      - name: Show environment info
-        run: |
-          echo "Environment: ${{ vars.ENVIRONMENT }}"
-
-      - name: Generate QA URL
-        id: qa-url
-        run: |
-          echo "url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >> $GITHUB_OUTPUT
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ needs.build.outputs.artifact-name }}
-          path: dist
-
-      - name: Deploy to Test PyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
-          TWINE_REPOSITORY_URL: ${{ vars.TEST_PYPI_URL }}/legacy/
-        run: |
-          pip install --upgrade pip twine
-          twine upload dist/*
-
-      - name: Validate in QA
-        id: validate
-        run: |
-          python -m venv test-env
-          source test-env/bin/activate
-
-          # Use extracted package name
-          pip install --index-url ${{ vars.TEST_PYPI_URL }}/simple/ \
-                     --extra-index-url https://pypi.org/simple/ \
-                     "${{ steps.get-package-name.outputs.name }}==${VERSION#v}"
-
-          # Use extracted import name
-          if python -c "import ${{ steps.get-package-name.outputs.import_name }}; print(${{ steps.get-package-name.outputs.import_name }}.__version__)"; then
-            echo "status=success" >> $GITHUB_OUTPUT
-          else
-            echo "status=failure" >> $GITHUB_OUTPUT
-            exit 1
-          fi
-        env:
-          VERSION: ${{ needs.version.outputs.version }}
-
-  # Stage 3: Product Review (RC only)
-  product-review:
-    needs: [version, qa-validation]
-    if: contains(needs.version.outputs.version, '-rc')
-    environment:
-      name: product-review
-      url: ${{ steps.product-url.outputs.url }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Show environment info
-        run: |
-          echo "Environment: ${{ vars.ENVIRONMENT }}"
-          echo "Review Type: ${{ vars.REVIEW_TYPE }}"
-
-      - name: Generate review URL
-        id: product-url
-        run: |
-          echo "url=${{ vars.TEST_PYPI_URL }}/project/${GITHUB_REPOSITORY#*/}/${VERSION}" >> $GITHUB_OUTPUT
-        env:
-          VERSION: ${{ needs.version.outputs.version }}
-
-      - name: Display release information
-        run: |
-          echo "Product Review Information:"
-          echo "Version: ${{ needs.version.outputs.version }}"
-          echo "QA Validation: ${{ needs.qa-validation.outputs.validation-status }}"
-          echo "Release Notes: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/${{ needs.version.outputs.version }}"
-
-  # Stage 4: Release Approval (RC only)
-  release-approval:
-    needs: [version, product-review]
-    if: contains(needs.version.outputs.version, '-rc')
-    environment:
-      name: release-approval
-    outputs:
-      approved-version: ${{ steps.get-approved-version.outputs.version }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Record RC approval
-        id: record-approval
-        run: |
-          RC_VERSION="${{ needs.version.outputs.version }}"
-
-          # Create approval record with metadata
-          mkdir -p .approvals
-          cat > .approvals/rc_approval.json << EOF
-          {
-            "version": "$RC_VERSION",
-            "approved_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-            "workflow_id": "${{ github.run_id }}",
-            "approver": "${{ github.actor }}",
-            "environment": "${{ github.environment }}"
-          }
-          EOF
-
-      - name: Upload approval record
-        uses: actions/upload-artifact@v4
-        with:
-          name: rc-approval-${{ needs.version.outputs.version }}
-          path: .approvals/rc_approval.json
-          retention-days: 90 # Keep approval records for 90 days
-
-  validate-release-readiness:
-    needs: [version]
-    if: "!contains(needs.version.outputs.version, '-rc')"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check for approved RC
-        id: check-rc
-        run: |
-          VERSION="${{ needs.version.outputs.version }}"
-
-          # Download all RC approval artifacts
-          mkdir -p approvals
-          ARTIFACTS=$(curl -L \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/artifacts")
-
-          # Look for most recent RC approval
-          RC_ARTIFACT=$(echo "$ARTIFACTS" | jq -r --arg ver "${VERSION%-*}" \
-            '.artifacts[] | select(.name | startswith("rc-approval-v" + $ver + "-rc")) |
-            select(.expired == false) | select(.expired_at == null)' |
-            jq -s 'sort_by(.created_at) | reverse | .[0]')
-
-          if [ -z "$RC_ARTIFACT" ]; then
-            echo "::error::No approved RC found for version $VERSION"
-            echo "Please complete the RC approval process first"
-            exit 1
-          fi
-
-          echo "Found approved RC: $(echo "$RC_ARTIFACT" | jq -r '.name')"
-          echo "Approved at: $(echo "$RC_ARTIFACT" | jq -r '.created_at')"
-
-  # Production Release Stage
-  prepare-release:
-    needs: [version, build, validate-release-readiness] # Add validation dependency
-    if: |
-      !contains(needs.version.outputs.version, '-rc') &&
-      !failure() && !cancelled()
-    runs-on: ubuntu-latest
-    environment:
-      name: production
-      url: ${{ steps.prod-url.outputs.url }}
-    steps:
-      - name: Show environment info
-        run: |
-          echo "Environment: ${{ vars.ENVIRONMENT }}"
-          echo "Deployment Target: ${{ vars.DEPLOYMENT_TARGET }}"
-
-      - name: Generate production URL
-        id: prod-url
-        run: |
-          echo "url=${{ vars.PYPI_URL }}/project/${GITHUB_REPOSITORY#*/}/${{ needs.version.outputs.version }}" >> $GITHUB_OUTPUT
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ needs.build.outputs.artifact-name }}
-          path: dist
-
-      - name: Upload for release
-        uses: actions/upload-artifact@v4
-        with:
-          name: production-release-artifacts
-          path: dist/
-          retention-days: 1
-
-  # Final Release Publishing
-  publish-release:
-    needs: [version, prepare-release]
-    if: |
-      !contains(needs.version.outputs.version, '-rc') &&
-      !failure() && !cancelled()
-    uses: ./.github/workflows/_reusable-release-publisher.yaml
-    with:
-      version: ${{ needs.version.outputs.version }}
-      artifact-name: production-release-artifacts
-      is-prerelease: false
+      version: ${{ needs.validation.outputs.version }}
+      artifact-name: ${{ needs.validation.outputs.artifact-name }}
     secrets:
       pypi-token: ${{ secrets.PYPI_TOKEN }}
 
-  # Final Status Check
   status:
-    needs:
-      - version
-      - technical-review
-      - qa-validation
-      - product-review
-      - release-approval
-      - prepare-release
-      - publish-release
-    if: |
-      always() &&
-      !inputs.dry_run
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check workflow status
-        run: |
-          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
-            echo "::error::Release workflow failed"
-            exit 1
-          fi
-
-          if [[ "${{ needs.version.outputs.version }}" =~ -rc ]]; then
-            echo "Release candidate workflow completed successfully"
-            echo "Version: ${{ needs.version.outputs.version }}"
-            echo "All approvals obtained and published to Test PyPI"
-          else
-            echo "Production release workflow completed successfully"
-            echo "Version: ${{ needs.version.outputs.version }}"
-            echo "Published to PyPI"
-          fi
+    needs: [validation, rc-release-process, production-release-process]
+    if: always() && !inputs.dry_run
+    uses: ./.github/workflows/_reusable-release-status.yaml
+    with:
+      version: ${{ needs.validation.outputs.version }}
+      rc-status: ${{ needs.rc-release-process.result }}
+      prod-status: ${{ needs.production-release-process.result }}

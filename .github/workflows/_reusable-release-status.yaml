@@ -1,0 +1,31 @@
+name: Release Status Check
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      rc-status:
+        required: true
+        type: string
+      prod-status:
+        required: true
+        type: string
+
+jobs:
+  check-status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify workflow status
+        run: |
+          if [[ "${{ inputs.rc-status }}" == "failure" || "${{ inputs.prod-status }}" == "failure" ]]; then
+            echo "::error::Release workflow failed"
+            exit 1
+          fi
+
+          if [[ "${{ inputs.version }}" =~ -rc ]]; then
+            echo "Release candidate ${{ inputs.version }} processed successfully"
+          else
+            echo "Production release ${{ inputs.version }} completed successfully"
+          fi
