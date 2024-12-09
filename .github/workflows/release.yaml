@@ -60,11 +60,11 @@ jobs:
   validation:
     uses: ./.github/workflows/_reusable-release-validation.yaml
     with:
-      version: ${{ inputs.version }}
+      version: ${{ github.event_name == 'push' && github.ref_name || inputs.version }}
       python-version: "3.10"
       node-version: "18.15.0"
       verify-package: true
-      dry-run: ${{ inputs.dry_run }}
+      dry-run: ${{ github.event.inputs.dry_run || false }}
       allow-prerelease: true
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
