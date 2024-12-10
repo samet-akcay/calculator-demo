@@ -50,7 +50,7 @@ name: Security Checks
 on:
   schedule:
     # Run security checks every day at 2 AM UTC
-    - cron: '0 2 * * *'
+    - cron: "0 2 * * *"
 
   workflow_dispatch:
     inputs:
@@ -59,9 +59,9 @@ on:
         required: true
         type: choice
         options:
-          - "bandit,semgrep,trivy"  # Default set
-          - "bandit,clamav,semgrep,trivy"  # Full set
-          - "bandit,semgrep"  # Minimal set
+          - "bandit,semgrep,trivy" # Default set
+          - "bandit,clamav,semgrep,trivy" # Full set
+          - "bandit,semgrep" # Minimal set
         default: "bandit,semgrep,trivy"
       scan-scope:
         description: "Scan scope"
