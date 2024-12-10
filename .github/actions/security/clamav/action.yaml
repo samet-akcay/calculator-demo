@@ -150,11 +150,20 @@ runs:
             cp scan_output.txt security-results/clamav/report.txt
           fi
 
-          echo \"exit_code=${SCAN_EXIT_CODE}\" >> $GITHUB_OUTPUT
-          echo \"threats_found=${INFECTED_FILES:-0}\" >> $GITHUB_OUTPUT
-          echo \"report_path=security-results/clamav/report.${{ inputs.output_format }}\" >> $GITHUB_OUTPUT
+          # Write outputs to a temporary file that will be processed by GitHub Actions
+          echo 'exit_code='${SCAN_EXIT_CODE} >> /tmp/github_output
+          echo 'threats_found='${INFECTED_FILES:-0} >> /tmp/github_output
+          echo 'report_path=security-results/clamav/report.${{ inputs.output_format }}' >> /tmp/github_output
 
           if [[ '${{ inputs.fail_on_findings }}' == 'true' && ${INFECTED_FILES:-0} -gt 0 ]]; then
             exit 1
           fi
           "
+
+    - name: Process outputs
+      id: process-outputs
+      shell: bash
+      run: |
+        if [ -f /tmp/github_output ]; then
+          cat /tmp/github_output >> $GITHUB_OUTPUT
+        fi
