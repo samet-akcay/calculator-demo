@@ -40,7 +40,6 @@
 # Required Inputs:
 # - version: Version string to validate
 # - python-version: Python version for building
-# - node-version: Node.js version for tools
 # - verify-package: Whether to verify built package
 # - dry-run: Run without creating artifacts
 # - allow-prerelease: Allow RC versions
@@ -60,7 +59,6 @@
 #        with:
 #          version: "v1.2.3"
 #          python-version: "3.10"
-#          node-version: "18.15.0"
 #        secrets:
 #          codecov-token: ${{ secrets.CODECOV_TOKEN }}
 #
@@ -71,7 +69,6 @@
 #        with:
 #          version: "v1.2.3-rc1"
 #          python-version: "3.10"
-#          node-version: "18.15.0"
 #          allow-prerelease: true
 #        secrets:
 #          codecov-token: ${{ secrets.CODECOV_TOKEN }}
@@ -88,9 +85,6 @@ on:
         required: true
         type: string
       python-version:
-        required: true
-        type: string
-      node-version:
         required: true
         type: string
       verify-package:
@@ -141,16 +135,26 @@ jobs:
     uses: ./.github/workflows/_reusable-code-quality.yaml
     with:
       python-version: ${{ inputs.python-version }}
-      node-version: ${{ inputs.node-version }}
 
-  tests:
+  unit-tests:
     needs: [version-check]
     uses: ./.github/workflows/_reusable-test-suite.yaml
     with:
       python-version: ${{ inputs.python-version }}
-      test-types: "unit,integration"
-      unit-test-timeout: 10
-      integration-test-timeout: 30
+      test-type: "unit"
+      runner: "ubuntu-latest"
+      timeout: 10
+    secrets:
+      codecov-token: ${{ secrets.codecov-token }}
+
+  integration-tests:
+    needs: [version-check]
+    uses: ./.github/workflows/_reusable-test-suite.yaml
+    with:
+      python-version: ${{ inputs.python-version }}
+      test-type: "integration"
+      runner: "self-hosted"
+      timeout: 30
     secrets:
       codecov-token: ${{ secrets.codecov-token }}
 
@@ -164,7 +168,7 @@ jobs:
       fail-on-findings: true
 
   build:
-    needs: [version-check, quality, tests, security]
+    needs: [version-check, quality, unit-tests, integration-tests, security]
     if: |
       !inputs.dry_run &&
       !failure() && !cancelled()
