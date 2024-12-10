@@ -1,34 +1,48 @@
-# Bandit Security Scanner Action
+# Bandit Scanner Action
 #
-# This composite action runs the Bandit security scanner for Python code analysis.
-# It provides comprehensive security scanning with configurable severity levels,
-# scoping options, and reporting formats.
+# This composite action executes Python security scanning using Bandit,
+# providing configurable security analysis capabilities.
 #
-# Features:
-# - Flexible scan scope (all files or only changed)
-# - Configurable severity and confidence thresholds
-# - Multiple output formats for reporting
-# - Integration with custom configuration files
-# - Caching of scan results
-# - Support for pyproject.toml configuration
+# Key Features:
+# - Python code scanning
+# - Severity configuration
+# - Flexible scan scope
+# - Multiple report formats
+# - Custom rule support
 #
-# Scan Process:
-# 1. Sets up Python environment
-# 2. Installs Bandit with TOML support
-# 3. Determines files to scan based on scope
-# 4. Executes scan with configured options
-# 5. Generates report in specified format
+# Process Stages:
+# 1. Environment Setup:
+#    - Python installation
+#    - Bandit configuration
+#    - Cache preparation
+#
+# 2. Scan Execution:
+#    - Target determination
+#    - Rule application
+#    - Security analysis
+#
+# 3. Results Processing:
+#    - Report generation
+#    - Finding analysis
+#    - Output formatting
+#
+# Required Inputs:
+# - scan_scope: Files to scan
+# - severity_level: Issue severity threshold
+# - fail_on_findings: Whether to fail on issues
+#
+# Outputs:
+# - scan_result: Scan exit code
+# - report_path: Results location
 #
 # Example Usage:
+# steps:
 #   - uses: ./.github/actions/security/bandit
 #     with:
 #       scan_scope: "changed"
 #       severity_level: "MEDIUM"
-#       output_format: "json"
-#       fail_on_findings: true
 #
-# Note: For optimal results, configure Bandit settings in pyproject.toml
-# or provide a custom configuration file.
+# Note: Configure Bandit settings in pyproject.toml for best results
 
 name: "Bandit Security Scan"
 description: "Runs Bandit security scanner with configurable options"

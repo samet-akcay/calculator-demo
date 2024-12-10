@@ -1,33 +1,63 @@
-# Reusable Test Suite Workflow
+# Test Suite Workflow
 #
-# This reusable workflow executes the test suite with configurable
-# options for different test types and environments.
+# This reusable workflow executes comprehensive test suites with configurable
+# parameters for different test types and environments.
 #
-# Features:
-# - Unit test execution
-# - Integration test execution
+# Key Features:
+# - Parallel test execution
+# - Multiple test types support
 # - Coverage reporting
-# - Test parallelization
 # - Configurable timeouts
+# - Result aggregation
 #
-# Test Process:
-# 1. Sets up test environment
-# 2. Runs unit tests
-# 3. Runs integration tests
-# 4. Generates coverage reports
-# 5. Uploads test results
+# Process Stages:
+# 1. Unit Testing:
+#    - Environment setup
+#    - Test execution
+#    - Coverage generation
+#
+# 2. Integration Testing:
+#    - Environment preparation
+#    - Test execution
+#    - Result collection
+#
+# 3. Results Processing:
+#    - Coverage reporting
+#    - Result aggregation
+#    - Artifact creation
+#
+# Required Inputs:
+# - python-version: Python version for tests (default: "3.10")
+# - test-types: Types of tests to run (default: "unit,integration")
+# - unit-test-timeout: Minutes before timeout (default: 10)
+# - integration-test-timeout: Minutes before timeout (default: 30)
+#
+# Required Secrets:
+# - codecov-token: Token for coverage reporting (optional)
+#
+# Outputs:
+# - test-results: Path to test results artifact
 #
 # Example Usage:
-#   jobs:
-#     tests:
-#       uses: ./.github/workflows/_reusable-test-suite.yaml
-#       with:
-#         test-types: "unit,integration"
-#         python-version: "3.11"
-#       secrets:
-#         codecov-token: ${{ secrets.CODECOV_TOKEN }}
+# 1. Basic Test Run:
+#    jobs:
+#      test:
+#        uses: ./.github/workflows/_reusable-test-suite.yaml
+#        with:
+#          test-types: "unit,integration"
 #
-# Note: Requires properly configured pytest environment
+# 2. Custom Configuration:
+#    jobs:
+#      test:
+#        uses: ./.github/workflows/_reusable-test-suite.yaml
+#        with:
+#          python-version: "3.11"
+#          test-types: "unit"
+#          unit-test-timeout: 15
+#        secrets:
+#          codecov-token: ${{ secrets.CODECOV_TOKEN }}
+#
+# Note: Requires properly configured pytest environment and test structure
 
 name: Reusable Test Suite
 

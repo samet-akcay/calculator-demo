@@ -1,27 +1,49 @@
-# Reusable Code Quality Workflow
+# Code Quality Workflow
 #
-# This reusable workflow runs various code quality checks using
-# pre-commit hooks and other quality assurance tools.
+# This reusable workflow executes code quality checks using pre-commit hooks
+# and other quality assurance tools across multiple languages.
 #
-# Features:
+# Key Features:
 # - Pre-commit hook execution
-# - Multiple language support
+# - Multi-language support
+# - Dependency caching
 # - Configurable environments
-# - Caching for performance
+# - Parallel check execution
 #
-# Quality Checks:
-# - Linting
-# - Formatting
-# - Type checking
-# - Style enforcement
+# Process Stages:
+# 1. Environment Preparation:
+#    - Python setup
+#    - Node.js setup
+#    - Cache configuration
+#
+# 2. Quality Checks:
+#    - Code linting
+#    - Style verification
+#    - Type checking
+#    - Best practices validation
+#
+# 3. Results Processing:
+#    - Error reporting
+#    - Check summaries
+#    - Status updates
+#
+# Required Inputs:
+# - python-version: Python version for checks (default: "3.10")
+# - node-version: Node.js version for checks (default: "18.15.0")
 #
 # Example Usage:
-#   jobs:
-#     quality:
-#       uses: ./.github/workflows/_reusable-code-quality.yaml
-#       with:
-#         python-version: "3.11"
-#         node-version: "20.0.0"
+# 1. Default Configuration:
+#    jobs:
+#      quality:
+#        uses: ./.github/workflows/_reusable-code-quality.yaml
+#
+# 2. Custom Versions:
+#    jobs:
+#      quality:
+#        uses: ./.github/workflows/_reusable-code-quality.yaml
+#        with:
+#          python-version: "3.11"
+#          node-version: "20.0.0"
 #
 # Note: Requires configured pre-commit hooks in repository
 

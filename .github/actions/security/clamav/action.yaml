@@ -1,42 +1,49 @@
-# ClamAV Security Scanner Action
+# ClamAV Scanner Action
 #
-# This composite action runs the ClamAV antivirus scanner to detect malware,
-# viruses, and other security threats in repository files. It provides robust
-# scanning capabilities with configurable options for different use cases.
+# This composite action executes antivirus scanning using ClamAV,
+# providing malware detection and security analysis.
 #
-# Features:
-# - Real-time virus database updates
-# - Flexible scan scope (all files or only changed)
-# - Configurable file size limits
-# - Automatic directory exclusions
-# - JSON and text report formats
-# - Detailed threat reporting
+# Key Features:
+# - Malware detection
+# - Real-time database updates
+# - Configurable scan scope
+# - Exclusion support
+# - Performance optimization
 #
-# Scan Process:
-# 1. Installs and configures ClamAV
-# 2. Updates virus definitions database
-# 3. Determines files to scan based on scope
-# 4. Performs scan with configured options
-# 5. Generates detailed scan report
-# 6. Analyzes and reports findings
+# Process Stages:
+# 1. Environment Setup:
+#    - ClamAV installation
+#    - Database updates
+#    - Cache configuration
 #
-# Performance Optimizations:
-# - Configurable file size limits
-# - Directory exclusions for faster scans
-# - Efficient changed-files detection
-# - Memory usage optimization
+# 2. Scan Execution:
+#    - Target selection
+#    - Exclusion application
+#    - Threat detection
+#
+# 3. Results Processing:
+#    - Report generation
+#    - Threat analysis
+#    - Finding summary
+#
+# Required Inputs:
+# - scan_scope: Files to scan
+# - exclude_dirs: Directories to skip
+# - max_file_size: Size limit for scanning
+#
+# Outputs:
+# - scan_result: Scan exit code
+# - report_path: Results location
+# - threats_found: Number of threats
 #
 # Example Usage:
+# steps:
 #   - uses: ./.github/actions/security/clamav
 #     with:
 #       scan_scope: "changed"
-#       exclude_dirs: ".git,node_modules,venv"
-#       max_file_size: "50"
-#       fail_on_findings: true
+#       exclude_dirs: ".git,node_modules"
 #
-# Note: Requires sufficient disk space for virus definitions database
-# and temporary scan files. Consider excluding large binary files and
-# dependencies to improve scan performance.
+# Note: Requires sufficient disk space for virus database
 
 name: "ClamAV Security Scan"
 description: "Runs ClamAV antivirus scanner with configurable options"

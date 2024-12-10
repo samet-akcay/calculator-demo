@@ -1,3 +1,51 @@
+# Production Release Process Workflow
+#
+# This reusable workflow manages the production release process, including
+# validation, preparation, and publication steps.
+#
+# Key Features:
+# - Release readiness validation
+# - RC approval verification
+# - Production deployment
+# - Artifact management
+# - Release publication
+#
+# Process Stages:
+# 1. Release Validation:
+#    - RC approval verification
+#    - Version compatibility check
+#    - Release readiness assessment
+#
+# 2. Release Preparation:
+#    - Artifact collection
+#    - Production bundle creation
+#    - Documentation updates
+#
+# 3. Publication:
+#    - Production PyPI deployment
+#    - GitHub release creation
+#    - Documentation publishing
+#
+# Required Inputs:
+# - version: Release version
+# - artifact-name: Name of validated artifact
+#
+# Required Secrets:
+# - pypi-token: Production PyPI token
+#
+# Example Usage:
+# 1. Production Release:
+#    jobs:
+#      release:
+#        uses: ./.github/workflows/_reusable-production-release-process.yaml
+#        with:
+#          version: "v1.2.3"
+#          artifact-name: "dist-123456789"
+#        secrets:
+#          pypi-token: ${{ secrets.PYPI_TOKEN }}
+#
+# Note: Should only be triggered after successful RC process completion
+
 name: Production Release Process
 
 on:

@@ -1,47 +1,42 @@
 # Reusable Security Scan Workflow
 #
 # This reusable workflow orchestrates multiple security scanning tools to provide
-# comprehensive security analysis of the codebase. It integrates various specialized
-# scanners for different security aspects.
+# comprehensive security analysis of the codebase.
 #
-# Features:
-# - Multi-tool Security Analysis
-#   • Bandit for Python security
-#   • ClamAV for malware detection
-#   • Semgrep for SAST
-#   • Trivy for vulnerabilities
-#
-# Scanning Capabilities:
-# - Code security analysis
-# - Dependency vulnerability checks
-# - Infrastructure as Code scanning
-# - Malware detection
-# - Secret detection
-# - Container security
-#
-# Execution Modes:
-# - Full repository scan
-# - Changed files only
+# Key Features:
+# - Parallel security tool execution
 # - Configurable tool selection
-# - Adjustable severity levels
+# - Comprehensive result aggregation
+# - Artifact preservation
+# - Customizable failure thresholds
 #
-# Performance Features:
-# - Parallel tool execution
-# - Scan result caching
-# - Incremental scanning
-# - Resource optimization
+# Process Stages:
+# 1. Tool Selection and Configuration
+# 2. Parallel Security Scans
+# 3. Result Aggregation
+# 4. Report Generation
+#
+# Required Inputs:
+# - tools: Comma-separated list of tools to run
+# - scan-scope: Scope of scanning
+# - severity-level: Minimum severity threshold
+# - fail-on-findings: Whether to fail on security findings
+#
+# Outputs:
+# - has-findings: Boolean indicating if security issues were found
 #
 # Example Usage:
 #   jobs:
 #     security:
 #       uses: ./.github/workflows/_reusable-security-scan.yaml
 #       with:
-#         tools: "bandit,semgrep,trivy"
+#         tools: "bandit,semgrep"
 #         scan-scope: "changed"
 #         severity-level: "MEDIUM"
+#         fail-on-findings: true
 #
 # Note: Different security tools may require specific permissions
-# or configurations. Results are preserved as workflow artifacts.
+# or configurations.
 
 name: Reusable Security Scan
 

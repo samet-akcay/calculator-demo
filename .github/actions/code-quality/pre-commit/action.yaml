@@ -1,31 +1,43 @@
-# Pre-commit Quality Checks Action
+# Pre-commit Quality Action
 #
-# This composite action runs pre-commit hooks to ensure code quality standards.
-# It provides a configurable environment for running various code quality checks
-# with support for Python and Node.js environments.
+# This composite action executes pre-commit hooks for code quality checks
+# with configurable Python and Node.js environments.
 #
-# Features:
-# - Configurable Python and Node.js versions
-# - Selective hook execution with skip option
-# - Caching support for improved performance
-# - Automatic pip and pre-commit installation
+# Key Features:
+# - Pre-commit hook execution
+# - Environment configuration
+# - Cache management
+# - Multi-language support
+# - Dependency handling
 #
-# Cache Strategy:
-# - Caches pip installations
-# - Caches pre-commit hook environments
-# - Uses Python and Node.js versions in cache key
-# - Includes .pre-commit-config.yaml hash in cache key
+# Process Stages:
+# 1. Environment Setup:
+#    - Python installation
+#    - Node.js installation
+#    - Cache configuration
+#
+# 2. Dependency Management:
+#    - Pre-commit installation
+#    - Hook installation
+#    - Cache restoration
+#
+# 3. Quality Checks:
+#    - Hook execution
+#    - Error reporting
+#    - Result caching
+#
+# Required Inputs:
+# - python-version: Python version to use
+# - node-version: Node.js version to use
 #
 # Example Usage:
+# steps:
 #   - uses: ./.github/actions/code-quality/pre-commit
 #     with:
 #       python-version: "3.11"
 #       node-version: "20.0.0"
-#       skip: "black,flake8"
-#       cache: "true"
 #
-# Note: This action assumes the presence of a .pre-commit-config.yaml file
-# in the repository root directory.
+# Note: Requires configured pre-commit hooks in repository
 
 name: "Pre-commit Quality Checks"
 description: "Runs pre-commit hooks for code quality checks"

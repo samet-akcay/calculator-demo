@@ -1,29 +1,56 @@
-# Reusable Version Check Workflow
+# Version Check Workflow
 #
-# This reusable workflow validates version strings and determines if they
-# are pre-releases. Supports both explicit version inputs and git tags.
+# This reusable workflow validates version strings and determines their release type,
+# supporting both explicit version inputs and git tags.
 #
-# Features:
-# - Version string validation
-# - Pre-release detection
-# - Git tag support
-# - Semantic versioning checks
+# Key Features:
+# - Semantic version validation
+# - Pre-release version support
+# - Git tag compatibility
+# - Version format enforcement
+# - Configurable pre-release rules
 #
-# Validation Process:
-# 1. Extracts version from input or git tag
-# 2. Validates version format
-# 3. Checks for pre-release indicators
-# 4. Enforces version constraints
+# Process Stages:
+# 1. Version Extraction:
+#    - Input parsing
+#    - Git tag reading
+#    - Format validation
+#
+# 2. Version Analysis:
+#    - Semantic version parsing
+#    - Pre-release detection
+#    - Format compliance check
+#
+# 3. Validation Rules:
+#    - Version prefix check
+#    - Component validation
+#    - Pre-release acceptance
+#
+# Required Inputs:
+# - version: Version string to validate (optional)
+# - allow-prerelease: Allow pre-release versions (default: true)
+#
+# Outputs:
+# - version: Validated version string
+# - is_prerelease: Whether version is a pre-release
 #
 # Example Usage:
-#   jobs:
-#     check-version:
-#       uses: ./.github/workflows/_reusable-version-check.yaml
-#       with:
-#         version: "v1.2.3"
-#         allow-prerelease: false
+# 1. Basic Version Check:
+#    jobs:
+#      validate:
+#        uses: ./.github/workflows/_reusable-version-check.yaml
+#        with:
+#          version: "v1.2.3"
 #
-# Note: Version format must be vX.Y.Z or vX.Y.Z-rcN
+# 2. Pre-release Check:
+#    jobs:
+#      validate:
+#        uses: ./.github/workflows/_reusable-version-check.yaml
+#        with:
+#          version: "v1.2.3-rc1"
+#          allow-prerelease: true
+#
+# Note: Version must follow format vX.Y.Z or vX.Y.Z-rcN
 
 name: Reusable Version Check
 

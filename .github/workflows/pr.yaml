@@ -1,42 +1,40 @@
-# Pull Request Checks Workflow
+# Pull Request Workflow
 #
-# This workflow orchestrates various quality and security checks for pull requests.
-# It uses reusable workflows to maintain modularity and consistency across checks.
+# This workflow orchestrates quality checks, tests, and security scans for
+# pull requests using reusable workflows.
 #
-# Workflow Components:
-# 1. Code Quality Checks:
-#    - Linting and style verification
+# Key Features:
+# - Code quality validation
+# - Test suite execution
+# - Security scanning
+# - Concurrent execution handling
+# - Automated feedback
+#
+# Process Stages:
+# 1. Quality Checks:
+#    - Code style verification
 #    - Type checking
 #    - Pre-commit hook validation
 #
-# 2. Test Suite:
-#    - Unit tests with parallelization
-#    - Integration tests
-#    - Coverage reporting to Codecov
+# 2. Testing:
+#    - Unit test execution
+#    - Integration testing
+#    - Coverage reporting
 #
-# 3. Security Scanning:
-#    - Bandit for Python security checks
-#    - Semgrep for static analysis
-#    - Scans only changed files for efficiency
-#
-# Triggers:
-# - Pull requests to main branch
-# - Pull requests to feature/* branches
-#
-# Configuration:
-# - Uses concurrent run management to prevent redundant executions
-# - Cancels outdated runs when new commits are pushed
-# - Configurable Python and Node.js versions
-# - Adjustable security scan severity levels
+# 3. Security:
+#    - Changed files scanning
+#    - Vulnerability detection
+#    - Security report generation
 #
 # Required Secrets:
-# - CODECOV_TOKEN: Token for uploading coverage reports
+# - CODECOV_TOKEN: Coverage reporting token
 #
 # Example Usage:
-# When a PR is created or updated, this workflow will:
-# 1. Run code quality checks with Python 3.10 and Node 18.15.0
-# 2. Execute the full test suite (unit + integration)
-# 3. Perform security scans on changed files with MEDIUM severity threshold
+# Automatically triggered on:
+# 1. Pull requests to main branch
+# 2. Pull requests to feature/* branches
+#
+# Note: Configured to cancel outdated runs when new commits are pushed
 
 name: PR Checks
 

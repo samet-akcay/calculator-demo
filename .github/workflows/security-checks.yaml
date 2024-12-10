@@ -1,51 +1,56 @@
 # Security Checks Workflow
 #
-# This workflow runs various security scanning tools including:
-# - Bandit (Python security linter)
-# - ClamAV (Antivirus scanner)
-# - Semgrep (Static analysis)
-# - Trivy (Container and dependency scanner)
+# This workflow orchestrates comprehensive security scanning using multiple tools and
+# configurable parameters. It supports both scheduled and manual execution modes.
 #
-# Can be used as:
-# - A reusable workflow (workflow_call)
-# - A manually triggered workflow (workflow_dispatch)
+# Key Features:
+# - Multiple security tool integration
+# - Scheduled daily scans
+# - Manual trigger with customization
+# - Configurable severity thresholds
+# - Flexible scan scope options
 #
-# Configurable options:
-# - Tools to run
-# - Scan scope (all files or changed only)
-# - Minimum severity level
-# - Failure conditions
-# - Custom scan paths
+# Process Stages:
+# 1. Scheduled Execution (Daily at 2 AM UTC):
+#    - Full security toolset
+#    - Complete codebase scan
+#    - LOW severity threshold
+#
+# 2. Manual Execution:
+#    - Selectable security tools
+#    - Adjustable scan scope
+#    - Customizable severity level
+#
+# Security Tools:
+# - Bandit: Python-specific security scanning
+# - ClamAV: Malware detection
+# - Semgrep: Static Application Security Testing (SAST)
+# - Trivy: Vulnerability scanning
+#
+# Required Permissions:
+# - contents: read
+# - security-events: write
+#
+# Example Usage:
+# 1. Scheduled Run:
+#    Automatically runs with full configuration
+#
+# 2. Manual Trigger:
+#    workflow_dispatch:
+#      inputs:
+#        tools: "bandit,semgrep,trivy"
+#        scan-scope: "changed"
+#        severity-level: "MEDIUM"
+#
+# Note: Results are available as workflow artifacts and in the
+# Security tab when integrated with GitHub Advanced Security.
 
 name: Security Checks
+
 on:
-  workflow_call:
-    inputs:
-      tools:
-        description: "Security tools to run (comma-separated: bandit,clamav,semgrep,trivy)"
-        required: false
-        type: string
-        default: "bandit,semgrep,trivy"
-      scan_scope:
-        description: "Scan scope (all/changed)"
-        required: false
-        type: string
-        default: "changed"
-      severity_level:
-        description: "Minimum severity level"
-        required: false
-        type: string
-        default: "LOW"
-      fail_on_findings:
-        description: "Fail workflow if issues found"
-        required: false
-        type: boolean
-        default: true
-      paths:
-        description: "Paths to scan"
-        required: false
-        type: string
-        default: "."
+  schedule:
+    # Run security checks every day at 2 AM UTC
+    - cron: '0 2 * * *'
 
   workflow_dispatch:
     inputs:
@@ -54,20 +59,19 @@ on:
         required: true
         type: choice
         options:
-          - all
-          - bandit
-          - clamav
-          - semgrep
-          - trivy
-      scan_scope:
+          - "bandit,semgrep,trivy"  # Default set
+          - "bandit,clamav,semgrep,trivy"  # Full set
+          - "bandit,semgrep"  # Minimal set
+        default: "bandit,semgrep,trivy"
+      scan-scope:
         description: "Scan scope"
         required: true
         type: choice
         options:
           - all
           - changed
-        default: "changed"
-      severity_level:
+        default: "all"
+      severity-level:
         description: "Minimum severity level"
         required: true
         type: choice
@@ -76,143 +80,17 @@ on:
           - MEDIUM
           - HIGH
         default: "LOW"
-      fail_on_findings:
-        description: "Fail workflow if issues found"
-        required: true
-        type: boolean
-        default: true
-      paths:
-        description: "Paths to scan"
-        required: false
-        type: string
-        default: "."
 
 permissions:
   contents: read
   security-events: write
 
 jobs:
-  determine-tools:
-    name: Setup Security Scan Tools
-    runs-on: ubuntu-latest
-    outputs:
-      run_bandit: ${{ steps.set-tools.outputs.run_bandit }}
-      run_clamav: ${{ steps.set-tools.outputs.run_clamav }}
-      run_semgrep: ${{ steps.set-tools.outputs.run_semgrep }}
-      run_trivy: ${{ steps.set-tools.outputs.run_trivy }}
-    steps:
-      - id: set-tools
-        run: |
-          TOOLS="${{ inputs.tools }}"
-          if [[ "$TOOLS" == "all" ]]; then
-            TOOLS="bandit,clamav,semgrep,trivy"
-          fi
-
-          echo "run_bandit=$([[ $TOOLS =~ bandit ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
-          echo "run_clamav=$([[ $TOOLS =~ clamav ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
-          echo "run_semgrep=$([[ $TOOLS =~ semgrep ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
-          echo "run_trivy=$([[ $TOOLS =~ trivy ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
-        shell: bash
-
-  bandit:
-    name: Python Security Scan (Bandit)
-    needs: determine-tools
-    if: needs.determine-tools.outputs.run_bandit == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Run Bandit scan
-        id: bandit
-        uses: ./.github/actions/security/bandit
-        with:
-          scan_scope: ${{ inputs.scan_scope }}
-          severity_level: ${{ inputs.severity_level }}
-          fail_on_findings: ${{ inputs.fail_on_findings }}
-          paths: ${{ inputs.paths }}
-          config_file: "pyproject.toml"
-
-      - name: Upload scan results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: bandit-results
-          path: ${{ steps.bandit.outputs.report_path }}
-
-  clamav:
-    name: Antivirus Security Scan (ClamAV)
-    needs: determine-tools
-    if: needs.determine-tools.outputs.run_clamav == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Run ClamAV scan
-        id: clamav
-        uses: ./.github/actions/security/clamav
-        with:
-          scan_scope: ${{ inputs.scan_scope }}
-          paths: ${{ inputs.paths }}
-          fail_on_findings: ${{ inputs.fail_on_findings }}
-
-      - name: Upload scan results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: clamav-results
-          path: ${{ steps.clamav.outputs.report_path }}
-
-  semgrep:
-    name: Static Analysis (Semgrep)
-    needs: determine-tools
-    if: needs.determine-tools.outputs.run_semgrep == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Run Semgrep scan
-        id: semgrep
-        uses: ./.github/actions/security/semgrep
-        with:
-          scan_scope: ${{ inputs.scan_scope }}
-          paths: ${{ inputs.paths }}
-          severity: ${{ inputs.severity_level }}
-          fail_on_findings: ${{ inputs.fail_on_findings }}
-
-      - name: Upload scan results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: semgrep-results
-          path: ${{ steps.semgrep.outputs.report_path }}
-
-  trivy:
-    name: Vulnerability Scan (Trivy)
-    needs: determine-tools
-    if: needs.determine-tools.outputs.run_trivy == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Run Trivy scan
-        id: trivy
-        uses: ./.github/actions/security/trivy
-        with:
-          scan_scope: ${{ inputs.scan_scope }}
-          scan_target: ${{ inputs.paths }}
-          severity: ${{ inputs.severity_level }}
-
-      - name: Upload scan results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: trivy-results
-          path: ${{ steps.trivy.outputs.report_path }}
+  security:
+    uses: ./.github/workflows/_reusable-security-scan.yaml
+    with:
+      # For scheduled runs, use full scan configuration
+      tools: ${{ github.event_name == 'schedule' && 'bandit,clamav,semgrep,trivy' || inputs.tools }}
+      scan-scope: ${{ github.event_name == 'schedule' && 'all' || inputs.scan-scope }}
+      severity-level: ${{ github.event_name == 'schedule' && 'LOW' || inputs.severity-level }}
+      fail-on-findings: true
