@@ -96,24 +96,26 @@ runs:
     - name: Run ClamAV scan
       id: run-clamav
       uses: docker://clamav/clamav:stable
+      env:
+        GITHUB_OUTPUT: /tmp/gh_output
       with:
-        entrypoint: /bin/sh
+        entrypoint: sh
         args: |
           -c "
           # Update virus definitions
           freshclam --quiet
 
           # Prepare exclude dirs
-          EXCLUDE_DIRS=$(echo '${{ inputs.exclude_dirs }}' | tr ',' ' ' | sed 's/[^ ]* */--exclude-dir=&/g')
+          EXCLUDE_DIRS=`echo '${{ inputs.exclude_dirs }}' | tr ',' ' ' | sed 's/[^ ]* */--exclude-dir=&/g'`
 
           # Convert MB to bytes
-          MAX_FILE_SIZE=$(( ${{ inputs.max_file_size }} * 1024 * 1024 ))
+          MAX_FILE_SIZE=`expr ${{ inputs.max_file_size }} \* 1024 \* 1024`
 
           # Create output directory
           mkdir -p security-results/clamav
 
           # Run scan based on scope
-          if [[ '${{ inputs.scan_scope }}' == 'changed' && -n '${{ steps.changed-files.outputs.all_changed_files }}' ]]; then
+          if [ '${{ inputs.scan_scope }}' = 'changed' ] && [ -n '${{ steps.changed-files.outputs.all_changed_files }}' ]; then
             echo 'Running ClamAV on changed files'
             FILES='${{ steps.changed-files.outputs.all_changed_files }}'
             SCAN_CMD='clamscan'
@@ -124,46 +126,42 @@ runs:
           fi
 
           # Run scan and capture output
-          ${SCAN_CMD} \
-            --max-filesize=${MAX_FILE_SIZE} \
-            ${EXCLUDE_DIRS} \
-            ${FILES} \
-            2>&1 | tee scan_output.txt
+          $SCAN_CMD \
+            --max-filesize=$MAX_FILE_SIZE \
+            $EXCLUDE_DIRS \
+            $FILES \
+            > scan_output.txt 2>&1
 
-          # Process results
-          SCAN_EXIT_CODE=${PIPESTATUS[0]}
-          INFECTED_FILES=$(grep 'Infected files:' scan_output.txt | awk '{print $3}')
+          SCAN_EXIT_CODE=$?
+          
+          # Count infected files
+          INFECTED_FILES=`grep 'Infected files:' scan_output.txt | awk '{print $3}'`
+          if [ -z \"$INFECTED_FILES\" ]; then
+            INFECTED_FILES=0
+          fi
 
           # Generate report
-          if [[ '${{ inputs.output_format }}' == 'json' ]]; then
-            {
-              echo '{'
-              echo '  \"scan_summary\": {'
-              echo '    \"files_scanned\": '$(grep 'Scanned files:' scan_output.txt | awk '{print $3}')','
-              echo '    \"threats_found\": '${INFECTED_FILES:-0}','
-              echo '    \"start_time\": \"'$(grep 'Start time:' scan_output.txt | cut -d: -f2- | xargs)'\",'
-              echo '    \"end_time\": \"'$(grep 'End time:' scan_output.txt | cut -d: -f2- | xargs)'\"'
-              echo '  }'
-              echo '}'
-            } > security-results/clamav/report.json
+          if [ '${{ inputs.output_format }}' = 'json' ]; then
+            echo '{
+              \"scan_summary\": {
+                \"files_scanned\": '`grep 'Scanned files:' scan_output.txt | awk '{print $3}'`',
+                \"threats_found\": '$INFECTED_FILES',
+                \"start_time\": \"'`grep 'Start time:' scan_output.txt | cut -d: -f2- | xargs`'\",
+                \"end_time\": \"'`grep 'End time:' scan_output.txt | cut -d: -f2- | xargs`'\"
+              }
+            }' > security-results/clamav/report.json
           else
             cp scan_output.txt security-results/clamav/report.txt
           fi
 
-          # Write outputs to a temporary file that will be processed by GitHub Actions
-          echo 'exit_code='${SCAN_EXIT_CODE} >> /tmp/github_output
-          echo 'threats_found='${INFECTED_FILES:-0} >> /tmp/github_output
-          echo 'report_path=security-results/clamav/report.${{ inputs.output_format }}' >> /tmp/github_output
+          # Write to outputs file
+          {
+            echo \"exit_code=$SCAN_EXIT_CODE\"
+            echo \"threats_found=$INFECTED_FILES\"
+            echo \"report_path=security-results/clamav/report.${{ inputs.output_format }}\"
+          } > \"$GITHUB_OUTPUT\"
 
-          if [[ '${{ inputs.fail_on_findings }}' == 'true' && ${INFECTED_FILES:-0} -gt 0 ]]; then
+          if [ '${{ inputs.fail_on_findings }}' = 'true' ] && [ $INFECTED_FILES -gt 0 ]; then
             exit 1
           fi
           "
-
-    - name: Process outputs
-      id: process-outputs
-      shell: bash
-      run: |
-        if [ -f /tmp/github_output ]; then
-          cat /tmp/github_output >> $GITHUB_OUTPUT
-        fi
