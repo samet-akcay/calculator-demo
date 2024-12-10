@@ -150,9 +150,9 @@ runs:
             cp scan_output.txt security-results/clamav/report.txt
           fi
 
-          echo \"exit_code=${SCAN_EXIT_CODE}\" >> \$GITHUB_OUTPUT
-          echo \"threats_found=${INFECTED_FILES:-0}\" >> \$GITHUB_OUTPUT
-          echo \"report_path=security-results/clamav/report.${{ inputs.output_format }}\" >> \$GITHUB_OUTPUT
+          echo \"exit_code=${SCAN_EXIT_CODE}\" >> $GITHUB_OUTPUT
+          echo \"threats_found=${INFECTED_FILES:-0}\" >> $GITHUB_OUTPUT
+          echo \"report_path=security-results/clamav/report.${{ inputs.output_format }}\" >> $GITHUB_OUTPUT
 
           if [[ '${{ inputs.fail_on_findings }}' == 'true' && ${INFECTED_FILES:-0} -gt 0 ]]; then
             exit 1
